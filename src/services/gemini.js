@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { LOGIWA_API_CONTEXT } from '../constants/logiwaContext';
+import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
+import { getRelevantArticles, getRelevantSwagger } from '../constants/contextFilter';
 
 export async function generateConsultantResponse(keys, chatHistory) {
   const { geminiKey, deepseekKey } = keys;
@@ -9,7 +10,7 @@ export async function generateConsultantResponse(keys, chatHistory) {
     const genAI = new GoogleGenerativeAI(geminiKey);
     const model = genAI.getGenerativeModel({ 
       model: "gemini-2.5-flash",
-      systemInstruction: LOGIWA_API_CONTEXT 
+      systemInstruction: LOGIWA_API_BASE_INSTRUCTIONS 
     });
     
     let promptText = "--- Conversation History ---\n";
@@ -17,6 +18,15 @@ export async function generateConsultantResponse(keys, chatHistory) {
       const roleName = msg.role === 'user' ? 'User' : 'Consultant';
       promptText += `${roleName}: ${msg.content}\n`;
     }
+    
+    // Inject Dynamic RAG Context at the very end
+    const lastUserMessage = chatHistory[chatHistory.length - 1].content;
+    const relevantArticles = getRelevantArticles(lastUserMessage, 3);
+    const relevantSwagger = getRelevantSwagger(lastUserMessage, 5);
+
+    promptText += `\n--- DYNAMIC CONTEXT INJECTED BY SYSTEM ---\n`;
+    promptText += `### RELEVANT HELP CENTER ARTICLES:\n${JSON.stringify(relevantArticles)}\n\n`;
+    promptText += `### RELEVANT SWAGGER API PATHS:\n${JSON.stringify(relevantSwagger)}\n\n`;
     promptText += "Consultant: ";
 
     const result = await model.generateContent(promptText);
@@ -24,7 +34,6 @@ export async function generateConsultantResponse(keys, chatHistory) {
     return response.text();
   } catch (error) {
     const errorMsg = error.message || "";
-    // Check if it's a 429 Quota Exceeded error
     if (errorMsg.includes("429") || errorMsg.includes("Quota exceeded") || errorMsg.includes("QuotaFailure")) {
       console.warn("Gemini Quota Exceeded. Falling back to DeepSeek...");
       if (!deepseekKey) {
@@ -38,8 +47,16 @@ export async function generateConsultantResponse(keys, chatHistory) {
 }
 
 async function generateDeepSeekResponse(apiKey, chatHistory) {
+  const lastUserMessage = chatHistory[chatHistory.length - 1].content;
+  const relevantArticles = getRelevantArticles(lastUserMessage, 3);
+  const relevantSwagger = getRelevantSwagger(lastUserMessage, 5);
+
+  const systemPrompt = LOGIWA_API_BASE_INSTRUCTIONS + `\n\n--- DYNAMIC CONTEXT ---\n` +
+    `HELP CENTER ARTICLES:\n${JSON.stringify(relevantArticles)}\n\n` +
+    `SWAGGER API:\n${JSON.stringify(relevantSwagger)}`;
+
   const messages = [
-    { role: "system", content: LOGIWA_API_CONTEXT }
+    { role: "system", content: systemPrompt }
   ];
   
   for (const msg of chatHistory) {
