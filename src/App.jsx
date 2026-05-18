@@ -9,12 +9,17 @@ function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('logiwa_api_key') || '');
+  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem('logiwa_deepseek_key') || '');
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem('logiwa_api_key', apiKey);
   }, [apiKey]);
+
+  useEffect(() => {
+    localStorage.setItem('logiwa_deepseek_key', deepseekKey);
+  }, [deepseekKey]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -58,7 +63,7 @@ function App() {
     setIsLoading(true);
 
     try {
-      const responseText = await generateConsultantResponse(apiKey, [...messages, newUserMessage]);
+      const responseText = await generateConsultantResponse({ geminiKey: apiKey, deepseekKey }, [...messages, newUserMessage]);
       setMessages((prev) => [...prev, { role: 'model', content: responseText }]);
     } catch (error) {
       console.error(error);
@@ -122,11 +127,21 @@ function App() {
             <input 
               type="password" 
               className="api-key-input" 
-              placeholder="Enter Gemini API Key..." 
+              placeholder="Gemini API Key" 
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
               autoComplete="new-password"
-              name="apiKeyInput"
+            />
+          </div>
+          <div className="api-key-container" style={{ marginLeft: '10px' }}>
+            <Key size={16} color="var(--text-secondary)" />
+            <input 
+              type="password" 
+              className="api-key-input" 
+              placeholder="DeepSeek Key (Fallback)" 
+              value={deepseekKey}
+              onChange={(e) => setDeepseekKey(e.target.value)}
+              autoComplete="new-password"
             />
           </div>
         </div>
