@@ -133,7 +133,7 @@ function App() {
               autoComplete="new-password"
             />
           </div>
-          <div className="api-key-container" style={{ marginLeft: '10px' }}>
+          <div className="api-key-container">
             <Key size={16} color="var(--text-secondary)" />
             <input 
               type="password" 
