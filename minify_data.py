@@ -3,7 +3,7 @@ import os
 
 def remove_bloat(obj):
     if isinstance(obj, dict):
-        keys_to_delete = ['example', 'examples']
+        keys_to_delete = ['example', 'examples', 'description']
         for k in keys_to_delete:
             if k in obj:
                 del obj[k]
@@ -37,8 +37,8 @@ def main():
             
         for item in help_data:
             # Keep max 1500 chars to save tokens safely
-            if 'content' in item and len(item['content']) > 1500:
-                item['content'] = item['content'][:1500] + "...(truncated)"
+            if 'content' in item and len(item['content']) > 800:
+                item['content'] = item['content'][:800] + "...(truncated)"
                 
         with open(help_path, 'w', encoding='utf-8') as f:
             json.dump(help_data, f, separators=(',', ':'))
