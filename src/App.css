@@ -357,3 +357,52 @@
 .api-key-input::placeholder {
   color: rgba(255,255,255,0.3);
 }
+
+.connect-btn {
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 100px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: all 0.2s;
+}
+
+.connect-btn:hover:not(:disabled) {
+  background: #FDBA74;
+  transform: translateY(-1px);
+}
+
+.connect-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.connected-badge {
+  border-color: rgba(74, 222, 128, 0.3) !important;
+  box-shadow: 0 0 10px rgba(74, 222, 128, 0.1) !important;
+}
+
+.disconnect-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  cursor: pointer;
+  margin-left: 0.5rem;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+}
+
+.disconnect-btn:hover {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+}

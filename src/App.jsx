@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, Send, User, Zap, Activity, Box, Lock, Key } from 'lucide-react';
+import { Bot, Send, User, Zap, Activity, Box, Lock, Key, CheckCircle } from 'lucide-react';
 import { generateConsultantResponse } from './services/gemini';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import './App.css';
 
 function App() {
@@ -9,7 +10,7 @@ function App() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('logiwa_api_key') || '');
-  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem('logiwa_deepseek_key') || '');
+  const [isKeyValid, setIsKeyValid] = useState(false);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -18,8 +19,10 @@ function App() {
   }, [apiKey]);
 
   useEffect(() => {
-    localStorage.setItem('logiwa_deepseek_key', deepseekKey);
-  }, [deepseekKey]);
+    if (apiKey && apiKey.startsWith("AIzaSy")) {
+       setIsKeyValid(true);
+    }
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -29,9 +32,30 @@ function App() {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  const validateApiKey = async () => {
+    if (!apiKey) return;
+    setIsLoading(true);
+    try {
+      if (!apiKey.startsWith("AIzaSy")) {
+         throw new Error("Invalid API Key format. It should start with 'AIzaSy'.");
+      }
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: "Hello" }] }],
+        generationConfig: { maxOutputTokens: 1 }
+      });
+      setIsKeyValid(true);
+    } catch (error) {
+       alert("API Key Validation Failed: " + error.message);
+       setIsKeyValid(false);
+    } finally {
+       setIsLoading(false);
+    }
+  };
+
   const handleInputChange = (e) => {
     setInput(e.target.value);
-    // Auto-resize textarea
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 150)}px`;
@@ -49,8 +73,8 @@ function App() {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
-    if (!apiKey) {
-      alert("Please enter your Gemini API Key in the top right corner.");
+    if (!isKeyValid) {
+      alert("Please connect a valid Gemini API Key first.");
       return;
     }
 
@@ -63,13 +87,16 @@ function App() {
     setIsLoading(true);
 
     try {
-      const responseText = await generateConsultantResponse({ geminiKey: apiKey, deepseekKey }, [...messages, newUserMessage]);
+      const responseText = await generateConsultantResponse(apiKey, [...messages, newUserMessage]);
       setMessages((prev) => [...prev, { role: 'model', content: responseText }]);
     } catch (error) {
       console.error(error);
+      if (error.message.includes("API key not valid") || error.message.includes("403")) {
+         setIsKeyValid(false);
+      }
       setMessages((prev) => [
         ...prev,
-        { role: 'model', content: `**Error:** I encountered an issue. Please check your API key or try again later. Details: ${error.message}` }
+        { role: 'model', content: `**Error:** I encountered an issue. Details: ${error.message}` }
       ]);
     } finally {
       setIsLoading(false);
@@ -122,28 +149,34 @@ function App() {
       {/* Main Content */}
       <main className="main-content">
         <div className="top-bar">
-          <div className="api-key-container">
-            <Key size={16} color="var(--text-secondary)" />
-            <input 
-              type="password" 
-              className="api-key-input" 
-              placeholder="Gemini API Key" 
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
-          <div className="api-key-container">
-            <Key size={16} color="var(--text-secondary)" />
-            <input 
-              type="password" 
-              className="api-key-input" 
-              placeholder="DeepSeek Key (Fallback)" 
-              value={deepseekKey}
-              onChange={(e) => setDeepseekKey(e.target.value)}
-              autoComplete="new-password"
-            />
-          </div>
+          {isKeyValid ? (
+            <div className="api-key-container connected-badge">
+              <CheckCircle size={16} color="#4ADE80" />
+              <span style={{ color: '#4ADE80', fontSize: '0.85rem', fontWeight: '500' }}>Connected</span>
+              <button 
+                 onClick={() => { setIsKeyValid(false); setApiKey(''); }}
+                 className="disconnect-btn"
+                 title="Disconnect API Key"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <div className="api-key-container">
+              <Key size={16} color="var(--text-secondary)" />
+              <input 
+                type="password" 
+                className="api-key-input" 
+                placeholder="Gemini API Key" 
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                autoComplete="new-password"
+              />
+              <button onClick={validateApiKey} className="connect-btn" disabled={!apiKey || isLoading}>
+                {isLoading ? '...' : 'Connect'}
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="chat-container">
