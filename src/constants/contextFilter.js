@@ -3,13 +3,14 @@ import helpCenterDoc from './helpCenter.json';
 
 const stopWords = new Set([
   "how","do","i","what","is","the","a","to","in","for","of","and","or","with",
-  "can","you","tell","me","about","my","an","on","get","create","update","delete"
+  "can","you","tell","me","about","my","an","on","nasıl","yaparım","nedir","bana",
+  "hakkında","için","ile","ve","veya","bir"
 ]);
 
 function extractKeywords(prompt) {
   return prompt
     .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^a-z0-9çğıöşü\s]/g, ' ')
     .split(/\s+/)
     .filter(w => w.length > 2 && !stopWords.has(w));
 }

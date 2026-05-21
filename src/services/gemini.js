@@ -21,8 +21,8 @@ export async function generateConsultantResponse(keys, chatHistory) {
     
     // Inject Dynamic RAG Context at the very end
     const lastUserMessage = chatHistory[chatHistory.length - 1].content;
-    const relevantArticles = getRelevantArticles(lastUserMessage, 3);
-    const relevantSwagger = getRelevantSwagger(lastUserMessage, 5);
+    const relevantArticles = getRelevantArticles(lastUserMessage, 5);
+    const relevantSwagger = getRelevantSwagger(lastUserMessage, 15);
 
     promptText += `\n--- DYNAMIC CONTEXT INJECTED BY SYSTEM ---\n`;
     promptText += `### RELEVANT HELP CENTER ARTICLES:\n${JSON.stringify(relevantArticles)}\n\n`;
@@ -48,8 +48,8 @@ export async function generateConsultantResponse(keys, chatHistory) {
 
 async function generateDeepSeekResponse(apiKey, chatHistory) {
   const lastUserMessage = chatHistory[chatHistory.length - 1].content;
-  const relevantArticles = getRelevantArticles(lastUserMessage, 3);
-  const relevantSwagger = getRelevantSwagger(lastUserMessage, 5);
+  const relevantArticles = getRelevantArticles(lastUserMessage, 5);
+  const relevantSwagger = getRelevantSwagger(lastUserMessage, 15);
 
   const systemPrompt = LOGIWA_API_BASE_INSTRUCTIONS + `\n\n--- DYNAMIC CONTEXT ---\n` +
     `HELP CENTER ARTICLES:\n${JSON.stringify(relevantArticles)}\n\n` +
