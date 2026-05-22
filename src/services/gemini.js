@@ -3,7 +3,7 @@ import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
 import { getRelevantArticles, getRelevantSwagger } from '../constants/contextFilter';
 import { getAllKnowledge } from './knowledgeBase';
 
-async function sendMessageWithRetry(chat, payload, maxRetries = 3) {
+async function sendMessageWithRetry(chat, payload, maxRetries = 5, onStatus = null) {
   let retries = 0;
   while (retries < maxRetries) {
     try {
@@ -13,7 +13,18 @@ async function sendMessageWithRetry(chat, payload, maxRetries = 3) {
         retries++;
         console.warn(`Gemini API overloaded (503/429). Retrying (${retries}/${maxRetries})...`);
         if (retries >= maxRetries) throw error;
-        await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, retries - 1))); // 2s, 4s, 8s
+        
+        let waitTime = 5000 * Math.pow(2, retries - 1); // 5s, 10s, 20s...
+        const match = error.message.match(/retry in (\d+(\.\d+)?)s/);
+        if (match) {
+          waitTime = Math.max(waitTime, parseFloat(match[1]) * 1000 + 1000); // Wait required time + 1s buffer
+        }
+        
+        if (onStatus) {
+          onStatus('rateLimitWait', { seconds: Math.ceil(waitTime / 1000) });
+        }
+        
+        await new Promise(resolve => setTimeout(resolve, waitTime));
       } else {
         throw error;
       }
@@ -124,7 +135,7 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
     
     const chat = model.startChat({ history });
 
-    let result = await sendMessageWithRetry(chat, lastUserMessage);
+    let result = await sendMessageWithRetry(chat, lastUserMessage, 5, onToolCall);
     let response = await result.response;
     
     // Agentic Loop
@@ -158,7 +169,7 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
           name: name,
           response: functionResponseData
         }
-      }]);
+      }], 5, onToolCall);
       response = await result.response;
       loopCount++;
     }

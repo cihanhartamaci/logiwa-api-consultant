@@ -137,6 +137,7 @@ function App() {
         (toolName, args) => {
           if (toolName === 'searchHelpCenter') setToolStatus(`Searching Help Center for "${args.query}"...`);
           if (toolName === 'searchSwagger') setToolStatus(`Searching API Docs for "${args.query}"...`);
+          if (toolName === 'rateLimitWait') setToolStatus(`Rate limit exceeded. Waiting ${args.seconds} seconds...`);
         },
         (topic, content) => {
           currentProposedKnowledge = { topic, content };
