@@ -143,7 +143,9 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
         functionResponseData = { results: articles.map(a => JSON.stringify(a)) };
       } else if (name === "searchSwagger") {
         const swaggerData = getRelevantSwagger(args.query, 10);
-        functionResponseData = { results: [JSON.stringify(swaggerData)] };
+        // Replace $ref with _ref to prevent Gemini SDK from parsing it as a schema reference
+        const safeString = JSON.stringify(swaggerData).replace(/"\$ref"/g, '"_ref"');
+        functionResponseData = { results: [safeString] };
       } else if (name === "proposeLearnedKnowledge") {
         // Trigger UI callback
         if (onKnowledgeProposed) onKnowledgeProposed(args.topic, args.content);
