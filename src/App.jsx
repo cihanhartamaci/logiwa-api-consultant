@@ -1,18 +1,52 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, Send, User, Zap, Activity, Box, Lock, Key, CheckCircle } from 'lucide-react';
+import { Bot, Send, User, Zap, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2 } from 'lucide-react';
 import { generateConsultantResponse } from './services/gemini';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { saveKnowledge } from './services/knowledgeBase';
 import './App.css';
+
+const HISTORY_KEY = 'logiwa_chat_history';
+const TTL_HOURS = 24;
 
 function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [toolStatus, setToolStatus] = useState(''); // e.g. "Searching Help Center..."
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('logiwa_api_key') || '');
   const [isKeyValid, setIsKeyValid] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // Load chat history on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(HISTORY_KEY);
+    if (saved) {
+      try {
+        const { timestamp, data } = JSON.parse(saved);
+        const hoursPassed = (Date.now() - timestamp) / (1000 * 60 * 60);
+        if (hoursPassed > TTL_HOURS) {
+          localStorage.removeItem(HISTORY_KEY);
+        } else {
+          setMessages(data);
+        }
+      } catch (e) {
+        console.error("Failed to load history", e);
+      }
+    }
+  }, []);
+
+  // Save chat history on change
+  useEffect(() => {
+    if (messages.length > 0) {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify({
+        timestamp: Date.now(),
+        data: messages
+      }));
+    }
+  }, [messages]);
 
   useEffect(() => {
     localStorage.setItem('logiwa_api_key', apiKey);
@@ -30,7 +64,7 @@ function App() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading]);
+  }, [messages, isLoading, toolStatus]);
 
   const validateApiKey = async () => {
     if (!apiKey) return;
@@ -69,6 +103,13 @@ function App() {
     }
   };
 
+  const handleClearHistory = () => {
+    if (window.confirm("Are you sure you want to clear the chat history?")) {
+      setMessages([]);
+      localStorage.removeItem(HISTORY_KEY);
+    }
+  };
+
   const handleSend = async () => {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
@@ -85,10 +126,33 @@ function App() {
       textareaRef.current.style.height = 'auto';
     }
     setIsLoading(true);
+    setToolStatus('');
 
     try {
-      const responseText = await generateConsultantResponse(apiKey, [...messages, newUserMessage]);
-      setMessages((prev) => [...prev, { role: 'model', content: responseText }]);
+      let currentProposedKnowledge = null;
+
+      const responseText = await generateConsultantResponse(
+        apiKey, 
+        [...messages, newUserMessage],
+        (toolName, args) => {
+          if (toolName === 'searchHelpCenter') setToolStatus(`Searching Help Center for "${args.query}"...`);
+          if (toolName === 'searchSwagger') setToolStatus(`Searching API Docs for "${args.query}"...`);
+        },
+        (topic, content) => {
+          currentProposedKnowledge = { topic, content };
+          setToolStatus(''); // Clear searching status
+        }
+      );
+
+      setMessages((prev) => [
+        ...prev, 
+        { 
+          role: 'model', 
+          content: responseText,
+          proposedKnowledge: currentProposedKnowledge,
+          approved: false
+        }
+      ]);
     } catch (error) {
       console.error(error);
       if (error.message.includes("API key not valid") || error.message.includes("403")) {
@@ -100,7 +164,25 @@ function App() {
       ]);
     } finally {
       setIsLoading(false);
+      setToolStatus('');
     }
+  };
+
+  const handleApproveKnowledge = (index, knowledge) => {
+    saveKnowledge(knowledge.topic, knowledge.content);
+    setMessages(prev => {
+      const newMessages = [...prev];
+      newMessages[index].approved = true;
+      return newMessages;
+    });
+  };
+
+  const handleRejectKnowledge = (index) => {
+    setMessages(prev => {
+      const newMessages = [...prev];
+      newMessages[index].proposedKnowledge = null; // Hide the card
+      return newMessages;
+    });
   };
 
   const handleSuggestedPrompt = (prompt) => {
@@ -128,6 +210,13 @@ function App() {
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '2rem' }}>
             I am your advanced AI assistant for the Logiwa API. Ask me anything about endpoints, webhooks, authentication, or LQL filtering.
           </p>
+          
+          {messages.length > 0 && (
+            <button className="clear-chat-btn" onClick={handleClearHistory}>
+              <Trash2 size={16} style={{ marginRight: '8px' }} />
+              Clear Chat History
+            </button>
+          )}
         </div>
 
         <div className="api-stats">
@@ -185,7 +274,7 @@ function App() {
               <Bot className="welcome-icon" />
               <h1 className="welcome-title text-gradient">How can I assist you?</h1>
               <p className="welcome-text">
-                Need help integrating with Logiwa? I can generate code snippets, explain complex LQL queries, or guide you through webhook configurations.
+                Need help integrating with Logiwa? I can search the documentation, generate code snippets, explain complex LQL queries, and even learn from you!
               </p>
               
               <div className="suggested-prompts">
@@ -211,7 +300,37 @@ function App() {
                     {msg.role === 'user' ? (
                       <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                     ) : (
-                      <ReactMarkdown className="markdown-body">{msg.content}</ReactMarkdown>
+                      <>
+                        <ReactMarkdown className="markdown-body">{msg.content}</ReactMarkdown>
+                        
+                        {/* Knowledge Proposal Card */}
+                        {msg.proposedKnowledge && (
+                          <div className="knowledge-card animate-fade-in">
+                            <div className="knowledge-header">
+                              <Save size={18} />
+                              <span>Proposed Knowledge to Learn</span>
+                            </div>
+                            <div className="knowledge-content">
+                              <strong>Topic:</strong> {msg.proposedKnowledge.topic}<br/>
+                              <strong>Details:</strong> {msg.proposedKnowledge.content}
+                            </div>
+                            <div className="knowledge-actions">
+                              {msg.approved ? (
+                                <span className="approved-text"><CheckCircle size={16}/> Saved to Knowledge Base!</span>
+                              ) : (
+                                <>
+                                  <button className="approve-btn" onClick={() => handleApproveKnowledge(idx, msg.proposedKnowledge)}>
+                                    Approve & Learn
+                                  </button>
+                                  <button className="reject-btn" onClick={() => handleRejectKnowledge(idx)}>
+                                    Reject
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -219,7 +338,22 @@ function App() {
             ))
           )}
           
-          {isLoading && (
+          {/* Tool Status Indicator */}
+          {toolStatus && (
+            <div className="message-wrapper message-ai animate-fade-in">
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                <div className="avatar avatar-ai">
+                  <Search size={18} color="white" />
+                </div>
+                <div className="message-bubble tool-status">
+                   <span className="spinner"></span> {toolStatus}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Regular Typing Indicator */}
+          {isLoading && !toolStatus && (
             <div className="message-wrapper message-ai animate-fade-in">
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                 <div className="avatar avatar-ai">
