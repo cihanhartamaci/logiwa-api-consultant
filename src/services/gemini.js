@@ -33,6 +33,13 @@ const tools = [
             query: { type: "STRING", description: "Search query" }
           },
           required: ["query"]
+        },
+        response: {
+          type: "OBJECT",
+          properties: {
+            results: { type: "ARRAY", items: { type: "STRING" } }
+          },
+          required: ["results"]
         }
       },
       {
@@ -44,6 +51,13 @@ const tools = [
             query: { type: "STRING", description: "Search query or endpoint name" }
           },
           required: ["query"]
+        },
+        response: {
+          type: "OBJECT",
+          properties: {
+            results: { type: "ARRAY", items: { type: "STRING" } }
+          },
+          required: ["results"]
         }
       },
       {
@@ -56,11 +70,19 @@ const tools = [
             content: { type: "STRING", description: "Detailed description of the rule, correction, or knowledge." }
           },
           required: ["topic", "content"]
+        },
+        response: {
+          type: "OBJECT",
+          properties: {
+            status: { type: "STRING" }
+          },
+          required: ["status"]
         }
       }
     ]
   }
 ];
+
 
 export async function generateConsultantResponse(apiKey, chatHistory, onToolCall, onKnowledgeProposed) {
   try {
