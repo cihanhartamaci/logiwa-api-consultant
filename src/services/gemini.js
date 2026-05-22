@@ -7,7 +7,9 @@ async function sendMessageWithRetry(chat, payload, maxRetries = 5, onStatus = nu
   let retries = 0;
   while (retries < maxRetries) {
     try {
-      return await chat.sendMessage(payload);
+      const result = await chat.sendMessage(payload);
+      await result.response; // Await response to catch errors here
+      return result;
     } catch (error) {
       if (error.message && (error.message.includes('503') || error.message.includes('429'))) {
         retries++;
