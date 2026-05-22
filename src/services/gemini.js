@@ -3,6 +3,24 @@ import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
 import { getRelevantArticles, getRelevantSwagger } from '../constants/contextFilter';
 import { getAllKnowledge } from './knowledgeBase';
 
+async function sendMessageWithRetry(chat, payload, maxRetries = 3) {
+  let retries = 0;
+  while (retries < maxRetries) {
+    try {
+      return await chat.sendMessage(payload);
+    } catch (error) {
+      if (error.message && (error.message.includes('503') || error.message.includes('429'))) {
+        retries++;
+        console.warn(`Gemini API overloaded (503/429). Retrying (${retries}/${maxRetries})...`);
+        if (retries >= maxRetries) throw error;
+        await new Promise(resolve => setTimeout(resolve, 2000 * Math.pow(2, retries - 1))); // 2s, 4s, 8s
+      } else {
+        throw error;
+      }
+    }
+  }
+}
+
 const tools = [
   {
     functionDeclarations: [
@@ -84,7 +102,7 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
     
     const chat = model.startChat({ history });
 
-    let result = await chat.sendMessage(lastUserMessage);
+    let result = await sendMessageWithRetry(chat, lastUserMessage);
     let response = await result.response;
     
     // Agentic Loop
@@ -109,7 +127,7 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
       }
 
       // Send the function response back to the model
-      result = await chat.sendMessage([{
+      result = await sendMessageWithRetry(chat, [{
         functionResponse: {
           name: name,
           response: functionResponseData
