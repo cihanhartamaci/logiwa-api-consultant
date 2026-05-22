@@ -139,9 +139,11 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
       let functionResponseData = {};
 
       if (name === "searchHelpCenter") {
-        functionResponseData = { results: getRelevantArticles(args.query, 5) };
+        const articles = getRelevantArticles(args.query, 5);
+        functionResponseData = { results: articles.map(a => JSON.stringify(a)) };
       } else if (name === "searchSwagger") {
-        functionResponseData = { results: getRelevantSwagger(args.query, 10) };
+        const swaggerData = getRelevantSwagger(args.query, 10);
+        functionResponseData = { results: [JSON.stringify(swaggerData)] };
       } else if (name === "proposeLearnedKnowledge") {
         // Trigger UI callback
         if (onKnowledgeProposed) onKnowledgeProposed(args.topic, args.content);
