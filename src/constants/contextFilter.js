@@ -78,16 +78,41 @@ export function getRelevantSwagger(prompt, limit = 5) {
     miniSwagger.paths[p.path] = p.methods;
   });
 
-  // Extract only the schemas that are actually used in the filtered paths
-  const pathString = JSON.stringify(miniSwagger.paths);
+  // Extract all schemas recursively to ensure model has complete context
   miniSwagger.components = { schemas: {} };
   
   if (swaggerDoc.components && swaggerDoc.components.schemas) {
-     for (const [schemaName, schemaObj] of Object.entries(swaggerDoc.components.schemas)) {
-        if (pathString.includes(`"#/components/schemas/${schemaName}"`)) {
-           miniSwagger.components.schemas[schemaName] = schemaObj;
+    let schemasToCheck = new Set();
+    
+    // Find initial schemas referenced in the filtered paths
+    const pathString = JSON.stringify(miniSwagger.paths);
+    const refRegex = /"#\/components\/schemas\/([^"]+)"/g;
+    let match;
+    while ((match = refRegex.exec(pathString)) !== null) {
+      schemasToCheck.add(match[1]);
+    }
+
+    // Recursively find nested schemas
+    const processedSchemas = new Set();
+    while (schemasToCheck.size > 0) {
+      const schemaName = [...schemasToCheck][0];
+      schemasToCheck.delete(schemaName);
+      processedSchemas.add(schemaName);
+
+      if (swaggerDoc.components.schemas[schemaName]) {
+        const schemaObj = swaggerDoc.components.schemas[schemaName];
+        miniSwagger.components.schemas[schemaName] = schemaObj;
+        
+        // Find refs inside this schema
+        const schemaStr = JSON.stringify(schemaObj);
+        let subMatch;
+        while ((subMatch = refRegex.exec(schemaStr)) !== null) {
+          if (!processedSchemas.has(subMatch[1])) {
+            schemasToCheck.add(subMatch[1]);
+          }
         }
-     }
+      }
+    }
   }
 
   return miniSwagger;

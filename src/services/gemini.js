@@ -142,7 +142,7 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
     
     // Agentic Loop
     let loopCount = 0;
-    while (response.functionCalls() && loopCount < 5) {
+    while (response.functionCalls() && loopCount < 3) {
       const call = response.functionCalls()[0];
       const name = call.name;
       const args = call.args;
@@ -176,7 +176,13 @@ export async function generateConsultantResponse(apiKey, chatHistory, onToolCall
       loopCount++;
     }
 
-    return response.text();
+    // After the agentic loop, ensure we have some response text
+    const finalText = response.text();
+    if (finalText && finalText.trim().length > 0) {
+      return finalText;
+    }
+    // Fallback placeholder if the model gave no text
+    return "I’m sorry, I couldn’t generate a response at this time. Please try rephrasing your query or let me know if you need further assistance.";
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw new Error(error.message || "Failed to communicate with the AI consultant.");
