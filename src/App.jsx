@@ -15,7 +15,15 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [toolStatus, setToolStatus] = useState(''); // e.g. "Searching Help Center..."
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('logiwa_api_key') || '');
-  const [isKeyValid, setIsKeyValid] = useState(false);
+  const [pollinationsKey, setPollinationsKey] = useState(
+    () => localStorage.getItem('logiwa_pollinations_key') || ''
+  );
+  const [enablePollinationsFallback, setEnablePollinationsFallback] = useState(
+    () => localStorage.getItem('logiwa_pollinations_fallback') !== 'false'
+  );
+  const [isKeyValid, setIsKeyValid] = useState(
+    () => localStorage.getItem('logiwa_api_key')?.startsWith("AIzaSy") || false
+  );
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -53,10 +61,15 @@ function App() {
   }, [apiKey]);
 
   useEffect(() => {
-    if (apiKey && apiKey.startsWith("AIzaSy")) {
-       setIsKeyValid(true);
-    }
-  }, []);
+    localStorage.setItem('logiwa_pollinations_key', pollinationsKey);
+  }, [pollinationsKey]);
+
+  useEffect(() => {
+    localStorage.setItem(
+      'logiwa_pollinations_fallback',
+      enablePollinationsFallback ? 'true' : 'false'
+    );
+  }, [enablePollinationsFallback]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -135,13 +148,22 @@ function App() {
         apiKey, 
         [...messages, newUserMessage],
         (toolName, args) => {
+          if (toolName === 'searchDocumentation') setToolStatus(`Searching all Logiwa documentation for "${args.query}"...`);
           if (toolName === 'searchHelpCenter') setToolStatus(`Searching Help Center for "${args.query}"...`);
           if (toolName === 'searchSwagger') setToolStatus(`Searching API Docs for "${args.query}"...`);
           if (toolName === 'rateLimitWait') setToolStatus(`Rate limit exceeded. Waiting ${args.seconds} seconds...`);
+          if (toolName === 'fallbackProvider') {
+            const modelLabel = args.model ? ` (${args.model})` : '';
+            setToolStatus(`Gemini unavailable — switching to free Pollinations fallback${modelLabel}...`);
+          }
         },
         (topic, content) => {
           currentProposedKnowledge = { topic, content };
           setToolStatus(''); // Clear searching status
+        },
+        {
+          enablePollinationsFallback,
+          pollinationsApiKey: pollinationsKey.trim(),
         }
       );
 
@@ -267,6 +289,27 @@ function App() {
               </button>
             </div>
           )}
+          <div className="fallback-controls">
+            <label className="fallback-toggle" title="If Gemini fails or returns empty, reuse the same Logiwa sources with free Pollinations models">
+              <input
+                type="checkbox"
+                checked={enablePollinationsFallback}
+                onChange={(e) => setEnablePollinationsFallback(e.target.checked)}
+              />
+              <span>Free Pollinations fallback</span>
+            </label>
+            {enablePollinationsFallback && (
+              <input
+                type="password"
+                className="fallback-key-input"
+                placeholder="Optional Pollinations key (enter.pollinations.ai)"
+                value={pollinationsKey}
+                onChange={(e) => setPollinationsKey(e.target.value)}
+                autoComplete="new-password"
+                title="Optional. Improves reliability; free key from enter.pollinations.ai"
+              />
+            )}
+          </div>
         </div>
 
         <div className="chat-container">

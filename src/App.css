@@ -407,6 +407,63 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+.fallback-controls {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(17, 24, 39, 0.75);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 100px;
+  padding: 0.4rem 0.9rem;
+}
+
+.fallback-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fallback-toggle input {
+  accent-color: var(--accent-primary);
+}
+
+.fallback-key-input {
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--glass-border);
+  color: white;
+  font-family: inherit;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.4rem 0.2rem 0.7rem;
+  width: 210px;
+}
+
+.fallback-key-input:focus {
+  outline: none;
+}
+
+.fallback-key-input::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+@media (max-width: 900px) {
+  .top-bar {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .fallback-key-input {
+    width: 150px;
+  }
+}
+
 /* Clear Chat Button */
 .clear-chat-btn {
   width: 100%;
