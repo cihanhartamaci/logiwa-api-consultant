@@ -152,6 +152,8 @@ function App() {
           if (toolName === 'searchHelpCenter') setToolStatus(`Searching Help Center for "${args.query}"...`);
           if (toolName === 'searchSwagger') setToolStatus(`Searching API Docs for "${args.query}"...`);
           if (toolName === 'rateLimitWait') setToolStatus(`Rate limit exceeded. Waiting ${args.seconds} seconds...`);
+          if (toolName === 'geminiModel') setToolStatus(`Asking Gemini (${args.model})...`);
+          if (toolName === 'geminiModelFailed') setToolStatus(`Gemini ${args.model} failed — trying next model...`);
           if (toolName === 'fallbackProvider') {
             const modelLabel = args.model ? ` (${args.model})` : '';
             setToolStatus(`Gemini unavailable — switching to free Pollinations fallback${modelLabel}...`);

@@ -9,6 +9,7 @@ describe('pollinations fallback helpers', () => {
     expect(POLLINATIONS_FALLBACK_MODELS[0]).toBe('openai-fast');
     expect(POLLINATIONS_FALLBACK_MODELS).toContain('mistral');
     expect(POLLINATIONS_FALLBACK_MODELS).toContain('gemma');
+    expect(POLLINATIONS_FALLBACK_MODELS.some((model) => model.includes(':free'))).toBe(true);
   });
 
   it('compacts documentation sources for smaller free-model contexts', () => {

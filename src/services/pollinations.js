@@ -8,6 +8,7 @@ export const POLLINATIONS_FALLBACK_MODELS = [
   'gemma',
   'nova-fast',
   'openai',
+  'YoannDev90/gemma-4-31b:free',
 ];
 
 function truncate(text, max = 1200) {
@@ -74,11 +75,11 @@ export function compactDocumentationSources(sources) {
 function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
   const messages = [{ role: 'system', content: systemInstruction }];
 
-  for (const msg of chatHistory.slice(0, -1)) {
+  for (const msg of chatHistory.slice(0, -1).slice(-8)) {
     if (msg.role === 'user') {
-      messages.push({ role: 'user', content: msg.content });
+      messages.push({ role: 'user', content: truncate(msg.content, 1500) });
     } else if (msg.role === 'model') {
-      messages.push({ role: 'assistant', content: msg.content || 'Understood.' });
+      messages.push({ role: 'assistant', content: truncate(msg.content || 'Understood.', 1500) });
     }
   }
 
@@ -86,17 +87,39 @@ function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
   return messages;
 }
 
-async function requestChatCompletion({ apiKey, model, messages }) {
+function authHeaders(apiKey) {
   const headers = {
     'Content-Type': 'application/json',
+    Accept: 'application/json, text/plain, */*',
+    Referer: 'https://cihanhartamaci.github.io/logiwa-api-consultant/',
   };
   if (apiKey) {
     headers.Authorization = `Bearer ${apiKey}`;
   }
+  return headers;
+}
 
+function extractCompletionText(data, rawText) {
+  const content = data?.choices?.[0]?.message?.content;
+  if (typeof content === 'string' && content.trim()) return content.trim();
+  if (Array.isArray(content)) {
+    const joined = content
+      .map((part) => (typeof part === 'string' ? part : part?.text || ''))
+      .join('')
+      .trim();
+    if (joined) return joined;
+  }
+  if (typeof data === 'string' && data.trim()) return data.trim();
+  if (typeof rawText === 'string' && rawText.trim() && !rawText.trim().startsWith('{')) {
+    return rawText.trim();
+  }
+  return '';
+}
+
+async function requestChatCompletion({ apiKey, model, messages }) {
   const response = await fetch(POLLINATIONS_CHAT_URL, {
     method: 'POST',
-    headers,
+    headers: authHeaders(apiKey),
     body: JSON.stringify({
       model,
       messages,
@@ -113,39 +136,41 @@ async function requestChatCompletion({ apiKey, model, messages }) {
   try {
     data = JSON.parse(rawText);
   } catch {
-    // Some gateways return plain text
     if (rawText.trim()) return rawText.trim();
     throw new Error(`Pollinations ${model} returned non-JSON empty response.`);
   }
 
-  const content = data?.choices?.[0]?.message?.content;
-  if (typeof content === 'string' && content.trim()) return content.trim();
-  if (Array.isArray(content)) {
-    const joined = content
-      .map((part) => (typeof part === 'string' ? part : part?.text || ''))
-      .join('')
-      .trim();
-    if (joined) return joined;
-  }
-
+  const text = extractCompletionText(data, rawText);
+  if (text) return text;
   throw new Error(`Pollinations ${model} returned an empty completion.`);
 }
 
-async function requestSimpleText({ apiKey, model, systemInstruction, groundedUserPrompt }) {
-  const prompt = encodeURIComponent(
-    `${systemInstruction}\n\nUSER QUESTION + SOURCES:\n${groundedUserPrompt}`
-  );
-  const url = `${POLLINATIONS_TEXT_URL}/${prompt}?model=${encodeURIComponent(model)}`;
-  const headers = {};
-  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+/** Prefer POST /text (plain response) — avoids giant GET URLs. */
+async function requestTextPost({ apiKey, model, messages }) {
+  const response = await fetch(POLLINATIONS_TEXT_URL, {
+    method: 'POST',
+    headers: authHeaders(apiKey),
+    body: JSON.stringify({
+      model,
+      messages,
+    }),
+  });
 
-  const response = await fetch(url, { headers });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(`Pollinations text ${model} failed (${response.status}): ${text.slice(0, 240)}`);
   }
   if (!text.trim()) {
     throw new Error(`Pollinations text ${model} returned empty content.`);
+  }
+
+  // Some deployments wrap JSON even on /text
+  try {
+    const parsed = JSON.parse(text);
+    const extracted = extractCompletionText(parsed, text);
+    if (extracted) return extracted;
+  } catch {
+    // plain text
   }
   return text.trim();
 }
@@ -168,18 +193,13 @@ export async function generatePollinationsFallback({
     if (onStatus) onStatus('fallbackProvider', { provider: 'pollinations', model });
 
     try {
-      return await requestChatCompletion({ apiKey, model, messages });
-    } catch (chatError) {
-      errors.push(chatError.message);
+      return await requestTextPost({ apiKey, model, messages });
+    } catch (textError) {
+      errors.push(textError.message);
       try {
-        return await requestSimpleText({
-          apiKey,
-          model,
-          systemInstruction,
-          groundedUserPrompt,
-        });
-      } catch (textError) {
-        errors.push(textError.message);
+        return await requestChatCompletion({ apiKey, model, messages });
+      } catch (chatError) {
+        errors.push(chatError.message);
       }
     }
   }
