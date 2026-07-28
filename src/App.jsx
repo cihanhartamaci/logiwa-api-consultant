@@ -292,23 +292,23 @@ function App() {
             </div>
           )}
           <div className="fallback-controls">
-            <label className="fallback-toggle" title="If Gemini fails or returns empty, reuse the same Logiwa sources with free Pollinations models">
+            <label className="fallback-toggle" title="If Gemini fails, reuse the same Logiwa sources with Pollinations (free key required)">
               <input
                 type="checkbox"
                 checked={enablePollinationsFallback}
                 onChange={(e) => setEnablePollinationsFallback(e.target.checked)}
               />
-              <span>Free Pollinations fallback</span>
+              <span>Pollinations fallback</span>
             </label>
             {enablePollinationsFallback && (
               <input
                 type="password"
                 className="fallback-key-input"
-                placeholder="Optional Pollinations key (enter.pollinations.ai)"
+                placeholder="Pollinations key (required) — enter.pollinations.ai"
                 value={pollinationsKey}
                 onChange={(e) => setPollinationsKey(e.target.value)}
                 autoComplete="new-password"
-                title="Optional. Improves reliability; free key from enter.pollinations.ai"
+                title="Free key from https://enter.pollinations.ai — required because Pollinations no longer allows anonymous text calls"
               />
             )}
           </div>

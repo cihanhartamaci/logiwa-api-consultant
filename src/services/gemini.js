@@ -161,6 +161,70 @@ const tools = [
   },
 ];
 
+function isIgnorableModelMessage(content) {
+  const text = String(content || '');
+  return (
+    text.startsWith('**Error:**') ||
+    text.includes('_Fallback provider: Pollinations AI_')
+  );
+}
+
+/**
+ * Gemini chat history must start with `user` and alternate user/model.
+ * slice(-N) can land on a model turn; error bubbles can also break pairing.
+ */
+export function buildGeminiChatContents(chatHistory, groundedPrompt) {
+  const raw = [];
+  for (const msg of chatHistory.slice(-20)) {
+    if (msg.role === 'user') {
+      raw.push({ role: 'user', parts: [{ text: msg.content }] });
+    } else if (msg.role === 'model') {
+      if (isIgnorableModelMessage(msg.content)) continue;
+      raw.push({
+        role: 'model',
+        parts: [{ text: String(msg.content || 'Understood.').slice(0, 4000) }],
+      });
+    }
+  }
+
+  // Drop leading model turns (invalid for Gemini history)
+  while (raw.length && raw[0].role !== 'user') {
+    raw.shift();
+  }
+
+  // Collapse consecutive same-role messages
+  const normalized = [];
+  for (const msg of raw) {
+    const prev = normalized[normalized.length - 1];
+    if (prev && prev.role === msg.role) {
+      if (msg.role === 'user') {
+        normalized[normalized.length - 1] = msg;
+      }
+      // skip consecutive model replies
+      continue;
+    }
+    normalized.push(msg);
+  }
+
+  // Ensure the outbound turn is the grounded user prompt
+  if (!normalized.length || normalized[normalized.length - 1].role !== 'user') {
+    normalized.push({ role: 'user', parts: [{ text: groundedPrompt }] });
+  } else {
+    normalized[normalized.length - 1] = {
+      role: 'user',
+      parts: [{ text: groundedPrompt }],
+    };
+  }
+
+  const history = normalized.slice(0, -1);
+  // history must be empty or start with user (already guaranteed) and end with model
+  if (history.length && history[history.length - 1].role === 'user') {
+    history.pop();
+  }
+
+  return { history, currentUserMessage: groundedPrompt };
+}
+
 async function generateWithGeminiModel({
   apiKey,
   modelName,
@@ -177,30 +241,15 @@ async function generateWithGeminiModel({
     tools,
   });
 
-  const contents = [];
-  for (const msg of chatHistory.slice(-12)) {
-    if (msg.role === 'user') {
-      contents.push({ role: 'user', parts: [{ text: msg.content }] });
-    } else if (msg.role === 'model') {
-      // Keep history compact; skip previous error bubbles
-      if (String(msg.content || '').startsWith('**Error:**')) continue;
-      contents.push({
-        role: 'model',
-        parts: [{ text: String(msg.content || 'Understood.').slice(0, 4000) }],
-      });
-    }
-  }
-
-  if (contents.length === 0 || contents[contents.length - 1].role !== 'user') {
-    contents.push({ role: 'user', parts: [{ text: groundedPrompt }] });
-  }
-
-  const history = contents.slice(0, -1);
+  const { history, currentUserMessage } = buildGeminiChatContents(
+    chatHistory,
+    groundedPrompt
+  );
   const chat = model.startChat({ history });
 
   if (onToolCall) onToolCall('geminiModel', { model: modelName });
 
-  let result = await sendMessageWithRetry(chat, groundedPrompt, 4, onToolCall);
+  let result = await sendMessageWithRetry(chat, currentUserMessage, 4, onToolCall);
   let response = await result.response;
 
   let loopCount = 0;
@@ -354,6 +403,13 @@ export async function generateConsultantResponse(
     }
 
     try {
+      if (!pollinationsApiKey) {
+        throw new Error(
+          'Pollinations now requires a free API key. Create one at https://enter.pollinations.ai and paste it in the Pollinations key field.',
+          { cause: geminiError }
+        );
+      }
+
       if (onToolCall) {
         onToolCall('fallbackProvider', {
           provider: 'pollinations',
