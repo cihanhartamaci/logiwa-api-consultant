@@ -3,9 +3,10 @@ const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 
 /** Short prompt for fallback models — never send the full Gemini system instruction. */
 export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are AIntegration, a Logiwa WMS API expert.
-Answer only from the retrieved Help Center and Swagger sources in the user message.
+This is an ongoing chat. Continue the same topic; resolve follow-ups from earlier turns.
+Answer from the retrieved Help Center and Swagger sources plus the conversation so far.
 Cite [HC-...] and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
-If sources are insufficient, say so. Be concise.`;
+If sources and prior turns are insufficient, say so. Be concise.`;
 
 /** Cheap / free-tier friendly models, tried in order. */
 export const POLLINATIONS_FALLBACK_MODELS = [
@@ -84,10 +85,10 @@ export function compactDocumentationSources(sources) {
 function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
   const messages = [{ role: 'system', content: systemInstruction }];
 
-  for (const msg of chatHistory.slice(0, -1).slice(-8)) {
+  for (const msg of chatHistory.slice(0, -1).slice(-12)) {
     if (msg.role === 'user') {
       messages.push({ role: 'user', content: truncate(msg.content, 1500) });
-    } else if (msg.role === 'model') {
+    } else if (msg.role === 'model' && !String(msg.content || '').startsWith('**Error:**')) {
       messages.push({ role: 'assistant', content: truncate(msg.content || 'Understood.', 1500) });
     }
   }

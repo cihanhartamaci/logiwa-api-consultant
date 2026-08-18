@@ -47,6 +47,8 @@ function App() {
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const messagesRef = useRef(messages);
+  messagesRef.current = messages;
 
   // Load chat history on mount
   useEffect(() => {
@@ -156,10 +158,11 @@ function App() {
     }
 
     const newUserMessage = { role: 'user', content: trimmedInput };
-    setMessages((prev) => [
-      ...prev.map((msg) => (msg.animate ? { ...msg, animate: false } : msg)),
+    const historyForModel = [
+      ...messagesRef.current.map((msg) => (msg.animate ? { ...msg, animate: false } : msg)),
       newUserMessage,
-    ]);
+    ];
+    setMessages(historyForModel);
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -172,7 +175,7 @@ function App() {
 
       const responseText = await generateConsultantResponse(
         apiKey, 
-        [...messages, newUserMessage],
+        historyForModel,
         (toolName, args) => {
           if (toolName === 'searchDocumentation') setToolStatus(`Searching all Logiwa documentation for "${args.query}"...`);
           if (toolName === 'searchHelpCenter') setToolStatus(`Searching Help Center for "${args.query}"...`);
