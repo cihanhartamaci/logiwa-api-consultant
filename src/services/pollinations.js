@@ -2,7 +2,7 @@ const POLLINATIONS_CHAT_URL = 'https://gen.pollinations.ai/v1/chat/completions';
 const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 
 /** Short prompt for fallback models — never send the full Gemini system instruction. */
-export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are a Logiwa WMS API consultant.
+export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are the Logiwa API Operations Expert.
 Answer only from the retrieved Help Center and Swagger sources in the user message.
 Cite [HC-...] and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
 If sources are insufficient, say so. Be concise.`;

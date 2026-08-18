@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, Send, User, Zap, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink } from 'lucide-react';
+import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
+import logiwaLogo from './assets/logiwa-logo.png';
+import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
 
 const SUGGESTED_PROMPTS = [
@@ -237,12 +239,10 @@ function App() {
       {/* Sidebar */}
       <aside className="sidebar glass">
         <div className="sidebar-header">
-          <div className="logo-container">
-            <Zap size={24} color="white" />
-          </div>
-          <div>
-            <div className="logo-text text-gradient">Hyper Consultant</div>
-            <div className="logo-sub">Logiwa API Expert v3.1</div>
+          <img src={logiwaLogo} alt="Logiwa" className="brand-logo" />
+          <div className="brand-copy">
+            <div className="logo-text">Logiwa API</div>
+            <div className="logo-sub">Operations Expert</div>
           </div>
         </div>
 
@@ -352,7 +352,7 @@ function App() {
             )}
             {pollinationsReady && !isKeyValid && (
               <span className="connected-badge pollinations fallback-ready-hint">
-                <CheckCircle size={14} color="#FBBF24" />
+                <CheckCircle size={14} color="#4bb7e0" />
                 Ready
               </span>
             )}
@@ -362,7 +362,7 @@ function App() {
         <div className="chat-container">
           {messages.length === 0 ? (
             <div className="welcome-screen animate-fade-in">
-              <Bot className="welcome-icon" />
+              <img src={logiwaMark} alt="" className="welcome-logo" />
               <div className="welcome-chips">
                 <span className="welcome-chip">
                   <BookOpen size={14} /> {SOURCE_STATS.helpCenterArticles} Help Center articles
@@ -371,9 +371,9 @@ function App() {
                   <Waypoints size={14} /> {SOURCE_STATS.swaggerOperations} Open API {SOURCE_STATS.openApiVersion} operations
                 </span>
               </div>
-              <h1 className="welcome-title text-gradient">How can I assist you?</h1>
+              <h1 className="welcome-title">Logiwa API — Operations Expert</h1>
               <p className="welcome-text">
-                I search the live Logiwa spec and Help Center before answering. Connect Gemini for the full consultant, or paste a free Pollinations key to start immediately.
+                I search the live Logiwa spec and Help Center before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
 
               {!canAsk && (
