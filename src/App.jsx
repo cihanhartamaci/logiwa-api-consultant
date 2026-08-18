@@ -4,6 +4,7 @@ import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/ge
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
+import LoginScreen from './components/LoginScreen';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -43,6 +44,9 @@ function App() {
   );
   const [isKeyValid, setIsKeyValid] = useState(
     () => looksLikeGeminiApiKey(localStorage.getItem('logiwa_api_key'))
+  );
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    () => localStorage.getItem('aintegration_signed_in') === '1'
   );
   
   const messagesEndRef = useRef(null);
@@ -262,6 +266,10 @@ function App() {
     }
   };
 
+  if (!isAuthenticated) {
+    return <LoginScreen onSuccess={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <div className="app-container">
       {/* Sidebar */}
@@ -270,7 +278,6 @@ function App() {
           <img src={logiwaLogo} alt="Logiwa" className="brand-logo" />
           <div className="brand-copy">
             <div className="logo-text text-gradient">AIntegration</div>
-            <div className="logo-sub">Logiwa Open API</div>
           </div>
         </div>
 
@@ -323,6 +330,7 @@ function App() {
             <span className="stat-value">Bearer Token</span>
           </div>
         </div>
+        <p className="app-credit">Created by cihanhartamaci with help from Cursor.</p>
       </aside>
 
       {/* Main Content */}

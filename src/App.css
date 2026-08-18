@@ -909,3 +909,108 @@
   align-items: center;
   gap: 0.25rem;
 }
+
+.app-credit {
+  margin-top: 0.85rem;
+  color: var(--text-secondary);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  text-align: center;
+  opacity: 0.85;
+}
+
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1.25rem;
+  gap: 1.25rem;
+}
+
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 2rem 1.6rem 1.6rem;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.login-logo {
+  width: 180px;
+  height: auto;
+  align-self: center;
+  margin-bottom: 0.35rem;
+}
+
+.login-title {
+  text-align: center;
+  font-size: 2rem;
+  margin: 0;
+}
+
+.login-copy {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  margin: 0 0 0.5rem;
+}
+
+.login-field {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: rgba(231, 246, 251, 0.9);
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  padding: 0.7rem 0.95rem;
+  color: var(--text-secondary);
+}
+
+.login-field input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+
+.login-field input:focus {
+  outline: none;
+}
+
+.login-error {
+  color: #dc2626;
+  font-size: 0.82rem;
+  margin: 0;
+  text-align: center;
+}
+
+.login-submit {
+  margin-top: 0.35rem;
+  border: none;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  background: linear-gradient(135deg, var(--accent-primary), var(--accent-green));
+  color: white;
+  font-family: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  box-shadow: 0 4px 15px rgba(75, 183, 224, 0.3);
+}
+
+.login-submit:hover {
+  transform: translateY(-1px);
+}
