@@ -77,12 +77,9 @@ async function sendMessageWithRetry(chat, payload, maxRetries = 3, onStatus = nu
       return result;
     } catch (error) {
       if (isRateLimitError(error)) {
-        retries++;
-        console.warn(`Gemini rate-limited. Retrying once (${retries}/2)...`, error.message);
-        if (retries >= 2) throw error;
-        if (onStatus) onStatus('rateLimitWait', { seconds: 2 });
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        continue;
+        // Daily per-model free-tier quota will not recover in a few seconds.
+        // Fail this model immediately so the cascade can try another Gemini model.
+        throw error;
       }
 
       if (isRetryableGeminiError(error)) {
@@ -407,9 +404,6 @@ async function generateWithGemini({
           reason: error.message,
           rateLimited: isRateLimitError(error),
         });
-      }
-      if (isRateLimitError(error)) {
-        throw error;
       }
     }
   }

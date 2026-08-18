@@ -8,15 +8,109 @@ Answer from the retrieved Help Center and Swagger sources plus the conversation 
 Cite [HC-...] and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
 If sources and prior turns are insufficient, say so. Be concise.`;
 
-/** Cheap / free-tier friendly models, tried in order. */
-export const POLLINATIONS_FALLBACK_MODELS = [
-  'openai-fast',
-  'mistral',
-  'gemma',
+/**
+ * Official Pollinations aliases. These usually need pollen once the free wallet is empty.
+ * `openai` is intentionally omitted — it is one of the more expensive defaults and returns 402 at 0 balance.
+ */
+export const POLLINATIONS_OFFICIAL_MODELS = [
   'nova-fast',
-  'openai',
-  'YoannDev90/gemma-4-31b:free',
+  'qwen-coder',
+  'openai-fast',
+  'gemma',
+  'deepseek',
+  'mistral',
 ];
+
+/**
+ * Static cascade used when the live /text/models list cannot be fetched.
+ * Zero-pollen community models first, then cheap official aliases.
+ */
+export const POLLINATIONS_FALLBACK_MODELS = [
+  'chigwell/llm7-fast',
+  'MarcosFRG/nemotron-3.5-lightning-30b',
+  'YoannDev90/muse-glimmer-30b:free',
+  'morriszdweck/osaii-api-smart',
+  'chirag-gamer/gpt-oss-120b',
+  ...POLLINATIONS_OFFICIAL_MODELS,
+];
+
+const POLLINATIONS_MODELS_URL = 'https://gen.pollinations.ai/text/models';
+let cachedFallbackModelsPromise = null;
+
+export function resetPollinationsModelCache() {
+  cachedFallbackModelsPromise = null;
+}
+
+export function pollinationsErrorKind(error) {
+  const message = String(error?.message || '');
+  if (/\(401\)|\(403\)/.test(message)) return 'auth';
+  if (/\(402\)|PAYMENT_REQUIRED|Insufficient balance/i.test(message)) return 'payment';
+  if (/Invalid model or alias/i.test(message) || /\(400\).*Invalid model/i.test(message)) {
+    return 'invalid_model';
+  }
+  return 'other';
+}
+
+function isZeroPollenModel(model) {
+  const pricing = model?.pricing || {};
+  return (
+    Number(pricing.promptTextTokens || 0) === 0 &&
+    Number(pricing.completionTextTokens || 0) === 0
+  );
+}
+
+export function pickPollinationsFallbackModels(catalog) {
+  const list = Array.isArray(catalog) ? catalog : [];
+  const zeroCost = list
+    .filter((model) => model?.name && isZeroPollenModel(model))
+    .map((model) => model.name)
+    .slice(0, 5);
+  const official = POLLINATIONS_OFFICIAL_MODELS.filter((name) =>
+    list.some((model) => model?.name === name || (model?.aliases || []).includes(name))
+  );
+  const cascade = [...new Set([...zeroCost, ...official])];
+  return cascade.length ? cascade : [...POLLINATIONS_FALLBACK_MODELS];
+}
+
+async function fetchLiveFallbackModels() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const response = await fetch(POLLINATIONS_MODELS_URL, {
+      headers: {
+        Accept: 'application/json',
+        Referer: 'https://cihanhartamaci.github.io/logiwa-api-consultant/',
+      },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Pollinations models list failed (${response.status})`);
+    }
+    const catalog = await response.json();
+    return pickPollinationsFallbackModels(catalog);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function resolvePollinationsFallbackModels() {
+  if (!cachedFallbackModelsPromise) {
+    cachedFallbackModelsPromise = fetchLiveFallbackModels().catch(() => [
+      ...POLLINATIONS_FALLBACK_MODELS,
+    ]);
+  }
+  return cachedFallbackModelsPromise;
+}
+
+export function formatPollinationsExhausted(errors) {
+  const unique = [...new Set((errors || []).filter(Boolean))];
+  const summary = unique.slice(0, 6).join(' | ');
+  const needsPollen = unique.some((message) => pollinationsErrorKind({ message }) === 'payment');
+  const pollenHint = needsPollen
+    ? ' Official models need pollen (balance is 0). Add a little at https://enter.pollinations.ai — free community models were tried first.'
+    : '';
+  return `Pollinations fallback exhausted.${pollenHint} ${summary}`.trim();
+}
 
 function truncate(text, max = 1200) {
   const value = String(text || '');
@@ -98,8 +192,12 @@ function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
 }
 
 function isPollinationsAuthError(error) {
-  const message = String(error?.message || '');
-  return /\(401\)|\(403\)/.test(message);
+  return pollinationsErrorKind(error) === 'auth';
+}
+
+function shouldSkipChatRetry(error) {
+  const kind = pollinationsErrorKind(error);
+  return kind === 'auth' || kind === 'payment' || kind === 'invalid_model';
 }
 
 function authHeaders(apiKey) {
@@ -200,11 +298,13 @@ export async function generatePollinationsFallback({
   chatHistory,
   groundedUserPrompt,
   onStatus = null,
+  models = null,
 }) {
   const messages = buildMessages(systemInstruction, chatHistory, groundedUserPrompt);
+  const cascade = models?.length ? models : await resolvePollinationsFallbackModels();
   const errors = [];
 
-  for (const model of POLLINATIONS_FALLBACK_MODELS) {
+  for (const model of cascade) {
     if (onStatus) onStatus('fallbackProvider', { provider: 'pollinations', model });
 
     try {
@@ -216,6 +316,9 @@ export async function generatePollinationsFallback({
           'Pollinations rejected the API key (401/403). Create a free key at https://enter.pollinations.ai and paste it in the Pollinations field.',
           { cause: textError }
         );
+      }
+      if (shouldSkipChatRetry(textError)) {
+        continue;
       }
       try {
         return await requestChatCompletion({ apiKey, model, messages });
@@ -231,7 +334,5 @@ export async function generatePollinationsFallback({
     }
   }
 
-  throw new Error(
-    `Pollinations fallback exhausted. ${errors.slice(-3).join(' | ')}`
-  );
+  throw new Error(formatPollinationsExhausted(errors));
 }

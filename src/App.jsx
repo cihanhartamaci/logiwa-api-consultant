@@ -189,7 +189,7 @@ function App() {
           if (toolName === 'geminiModelFailed') {
             setToolStatus(
               args.rateLimited
-                ? `Gemini ${args.model} hit a rate limit — switching to Pollinations...`
+                ? `Gemini ${args.model} quota exhausted — trying the next Gemini model...`
                 : `Gemini ${args.model} failed — trying next model...`
             );
           }
