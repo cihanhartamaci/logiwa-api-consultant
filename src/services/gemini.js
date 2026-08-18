@@ -4,6 +4,7 @@ import { getAllKnowledge } from './knowledgeBase';
 import {
   compactDocumentationSources,
   generatePollinationsFallback,
+  POLLINATIONS_FALLBACK_SYSTEM_PROMPT,
 } from './pollinations';
 
 const GEMINI_MODELS = [
@@ -21,34 +22,53 @@ function loadDocumentationModule() {
   return documentationModulePromise;
 }
 
-function buildSystemInstruction() {
+function appendLearnedKnowledge(basePrompt) {
   const learnedKnowledge = getAllKnowledge();
-  let systemInstruction = LOGIWA_API_BASE_INSTRUCTIONS;
-  if (learnedKnowledge.length > 0) {
-    systemInstruction += '\n\n--- USER TAUGHT KNOWLEDGE (ALWAYS PRIORITIZE) ---\n';
-    learnedKnowledge.forEach((k) => {
-      systemInstruction += `[Topic: ${k.topic}] -> ${k.content}\n`;
-    });
-  }
-  return systemInstruction;
+  if (!learnedKnowledge.length) return basePrompt;
+  let prompt = `${basePrompt}\n\n--- USER TAUGHT KNOWLEDGE (ALWAYS PRIORITIZE) ---\n`;
+  learnedKnowledge.forEach((k) => {
+    prompt += `[Topic: ${k.topic}] -> ${k.content}\n`;
+  });
+  return prompt;
+}
+
+function buildSystemInstruction() {
+  return appendLearnedKnowledge(LOGIWA_API_BASE_INSTRUCTIONS);
+}
+
+function buildPollinationsSystemInstruction() {
+  return appendLearnedKnowledge(POLLINATIONS_FALLBACK_SYSTEM_PROMPT);
+}
+
+export function looksLikeGeminiApiKey(value) {
+  return /^AIza[0-9A-Za-z_-]{20,}$/.test(String(value || '').trim());
+}
+
+export function isRateLimitError(error) {
+  const message = String(error?.message || error || '');
+  return (
+    message.includes('429') ||
+    message.includes('RESOURCE_EXHAUSTED') ||
+    /quota/i.test(message) ||
+    /rate limit/i.test(message)
+  );
 }
 
 function isRetryableGeminiError(error) {
+  if (isRateLimitError(error)) return true;
   const message = String(error?.message || error || '');
   return (
     message.includes('503') ||
-    message.includes('429') ||
     message.includes('500') ||
     message.includes('overloaded') ||
     message.includes('UNAVAILABLE') ||
-    message.includes('RESOURCE_EXHAUSTED') ||
     message.includes('fetch') ||
     message.includes('network') ||
     message.includes('Failed to fetch')
   );
 }
 
-async function sendMessageWithRetry(chat, payload, maxRetries = 4, onStatus = null) {
+async function sendMessageWithRetry(chat, payload, maxRetries = 3, onStatus = null) {
   let retries = 0;
   while (retries < maxRetries) {
     try {
@@ -56,12 +76,21 @@ async function sendMessageWithRetry(chat, payload, maxRetries = 4, onStatus = nu
       await result.response;
       return result;
     } catch (error) {
+      if (isRateLimitError(error)) {
+        retries++;
+        console.warn(`Gemini rate-limited. Retrying once (${retries}/2)...`, error.message);
+        if (retries >= 2) throw error;
+        if (onStatus) onStatus('rateLimitWait', { seconds: 2 });
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        continue;
+      }
+
       if (isRetryableGeminiError(error)) {
         retries++;
         console.warn(`Gemini retryable error. Retrying (${retries}/${maxRetries})...`, error.message);
         if (retries >= maxRetries) throw error;
 
-        let waitTime = 4000 * Math.pow(2, retries - 1);
+        let waitTime = 2000 * Math.pow(2, retries - 1);
         const match = String(error.message).match(/retry in (\d+(\.\d+)?)s/i);
         if (match) {
           waitTime = Math.max(waitTime, parseFloat(match[1]) * 1000 + 1000);
@@ -175,7 +204,7 @@ function isIgnorableModelMessage(content) {
  */
 export function buildGeminiChatContents(chatHistory, groundedPrompt) {
   const raw = [];
-  for (const msg of chatHistory.slice(-20)) {
+  for (const msg of chatHistory.slice(-10)) {
     if (msg.role === 'user') {
       raw.push({ role: 'user', parts: [{ text: msg.content }] });
     } else if (msg.role === 'model') {
@@ -249,11 +278,11 @@ async function generateWithGeminiModel({
 
   if (onToolCall) onToolCall('geminiModel', { model: modelName });
 
-  let result = await sendMessageWithRetry(chat, currentUserMessage, 4, onToolCall);
+  let result = await sendMessageWithRetry(chat, currentUserMessage, 3, onToolCall);
   let response = await result.response;
 
   let loopCount = 0;
-  while (loopCount < 5) {
+  while (loopCount < 2) {
     const calls = response.functionCalls?.() || [];
     if (!calls.length) break;
 
@@ -266,8 +295,8 @@ async function generateWithGeminiModel({
         if (name === 'searchDocumentation') {
           const { searchDocumentation } = await loadDocumentationModule();
           const documentation = searchDocumentation(args.query, {
-            helpLimit: 6,
-            swaggerLimit: 8,
+            helpLimit: 4,
+            swaggerLimit: 5,
           });
           const compact = compactDocumentationSources(documentation);
           const safeString = JSON.stringify(compact).replace(/"\$ref"/g, '"_ref"');
@@ -290,7 +319,7 @@ async function generateWithGeminiModel({
       })
     );
 
-    result = await sendMessageWithRetry(chat, functionResponses, 4, onToolCall);
+    result = await sendMessageWithRetry(chat, functionResponses, 3, onToolCall);
     response = await result.response;
     loopCount++;
   }
@@ -323,7 +352,14 @@ async function generateWithGemini({
       errors.push(`${modelName}: ${error.message}`);
       console.warn(`Gemini model ${modelName} failed:`, error.message);
       if (onToolCall) {
-        onToolCall('geminiModelFailed', { model: modelName, reason: error.message });
+        onToolCall('geminiModelFailed', {
+          model: modelName,
+          reason: error.message,
+          rateLimited: isRateLimitError(error),
+        });
+      }
+      if (isRateLimitError(error)) {
+        throw error;
       }
     }
   }
@@ -369,24 +405,57 @@ export async function generateConsultantResponse(
     pollinationsApiKey = '',
   } = options;
 
-  if (!apiKey) throw new Error('Gemini API key is required.');
+  const geminiReady = looksLikeGeminiApiKey(apiKey);
+  const pollinationsReady =
+    enablePollinationsFallback && Boolean(String(pollinationsApiKey || '').trim());
 
-  const systemInstruction = buildSystemInstruction();
+  if (!geminiReady && !pollinationsReady) {
+    throw new Error('A Gemini or Pollinations API key is required.');
+  }
+
   const lastUserMessage = [...chatHistory].reverse().find((msg) => msg.role === 'user')?.content;
   if (!lastUserMessage) throw new Error('A user message is required.');
 
   if (onToolCall) onToolCall('searchDocumentation', { query: lastUserMessage });
   const { searchDocumentation } = await loadDocumentationModule();
   const initialSources = searchDocumentation(lastUserMessage, {
-    helpLimit: 6,
-    swaggerLimit: 8,
+    helpLimit: 4,
+    swaggerLimit: 5,
   });
   const groundedPrompt = buildGroundedPrompt(lastUserMessage, initialSources);
+
+  const runPollinations = async (reason) => {
+    if (!pollinationsReady) {
+      throw new Error(
+        'Pollinations now requires a free API key. Create one at https://enter.pollinations.ai and paste it in the Pollinations key field.'
+      );
+    }
+
+    if (onToolCall) {
+      onToolCall('fallbackProvider', {
+        provider: 'pollinations',
+        reason,
+      });
+    }
+
+    return generateWithPollinations({
+      pollinationsApiKey,
+      systemInstruction: buildPollinationsSystemInstruction(),
+      chatHistory,
+      initialSources,
+      lastUserMessage,
+      onToolCall,
+    });
+  };
+
+  if (!geminiReady) {
+    return runPollinations('Gemini key missing or invalid — using Pollinations');
+  }
 
   try {
     return await generateWithGemini({
       apiKey,
-      systemInstruction,
+      systemInstruction: buildSystemInstruction(),
       chatHistory,
       groundedPrompt,
       onToolCall,
@@ -403,28 +472,7 @@ export async function generateConsultantResponse(
     }
 
     try {
-      if (!pollinationsApiKey) {
-        throw new Error(
-          'Pollinations now requires a free API key. Create one at https://enter.pollinations.ai and paste it in the Pollinations key field.',
-          { cause: geminiError }
-        );
-      }
-
-      if (onToolCall) {
-        onToolCall('fallbackProvider', {
-          provider: 'pollinations',
-          reason: geminiError.message || 'empty or failed Gemini response',
-        });
-      }
-
-      return await generateWithPollinations({
-        pollinationsApiKey,
-        systemInstruction,
-        chatHistory,
-        initialSources,
-        lastUserMessage,
-        onToolCall,
-      });
+      return await runPollinations(geminiError.message || 'empty or failed Gemini response');
     } catch (fallbackError) {
       console.error('Pollinations fallback failed:', fallbackError);
       throw new Error(

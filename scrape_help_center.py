@@ -1,99 +1,151 @@
+import json
+import re
+import time
+from collections import deque
+from pathlib import Path
+from urllib.parse import urljoin, urlparse, urlunparse
+
 import requests
 from bs4 import BeautifulSoup
-import json
-import time
-import os
 
-BASE_URL = "https://intercom.help"
-START_URL = f"{BASE_URL}/mylogiwa/en"
+BASE = "https://intercom.help/mylogiwa/en"
+START = f"{BASE}/"
+OUTPUT = Path(__file__).parent / "src" / "constants" / "helpCenter.json"
+USER_AGENT = (
+    "Mozilla/5.0 (compatible; LogiwaAPIConsultant/1.0; "
+    "+https://github.com/cihanhartamaci/logiwa-api-consultant)"
+)
+DELAY_SECONDS = 0.35
+MAX_PAGES = 2500
 
-def get_soup(url):
-    try:
-        response = requests.get(url, timeout=10)
-        response.raise_for_status()
-        return BeautifulSoup(response.text, 'html.parser')
-    except Exception as e:
-        print(f"Error fetching {url}: {e}")
-        return None
+session = requests.Session()
+session.headers.update({"User-Agent": USER_AGENT, "Accept-Language": "en"})
 
-def extract_article_content(article_url):
-    print(f"Scraping article: {article_url}")
-    soup = get_soup(article_url)
-    if not soup:
-        return None
-    
-    # Locate title
-    title_element = soup.find('h1')
-    title = title_element.text.strip() if title_element else "Untitled"
-    
-    # Locate article body
-    article_body = soup.find('article') or soup.find('div', class_='article-body')
-    if not article_body:
-        return None
-        
-    # Extract text, removing unnecessary tags
-    for tag in article_body(['script', 'style', 'nav', 'header', 'footer']):
-        tag.decompose()
-        
-    content = article_body.get_text(separator='\n', strip=True)
-    return {"title": title, "url": article_url, "content": content}
 
-def main():
-    print(f"Starting crawler at {START_URL} ...")
-    soup = get_soup(START_URL)
-    if not soup:
-        print("Failed to access main help center page.")
-        return
+def normalize_url(url: str) -> str:
+    parsed = urlparse(urljoin(START, url))
+    if parsed.netloc and parsed.netloc != "intercom.help":
+        return ""
+    path = parsed.path.rstrip("/") or "/"
+    if not path.startswith("/mylogiwa/en"):
+        return ""
+    if any(path.endswith(ext) for ext in (".xml", ".json", ".png", ".jpg", ".svg", ".css", ".js")):
+        return ""
+    # Drop fragments and most query params except pagination.
+    query = ""
+    if parsed.query:
+        params = []
+        for part in parsed.query.split("&"):
+            key = part.split("=", 1)[0].lower()
+            if key in {"page"}:
+                params.append(part)
+        query = "&".join(params)
+    return urlunparse(("https", "intercom.help", path, "", query, ""))
 
-    article_links = set()
-    
-    # 1. Find Collections (Categories)
-    collections = soup.find_all('a', href=True)
-    collection_urls = [a['href'] for a in collections if '/en/collections/' in a['href']]
-    
-    for c_url in collection_urls:
-        full_c_url = BASE_URL + c_url if c_url.startswith('/') else c_url
-        print(f"Checking collection: {full_c_url}")
-        c_soup = get_soup(full_c_url)
-        if not c_soup:
+
+def article_id(url: str) -> str:
+    match = re.search(r"/articles/(\d+)", url)
+    return match.group(1) if match else ""
+
+
+def extract_links(soup: BeautifulSoup, current_url: str) -> list[str]:
+    links = []
+    for a in soup.select("a[href]"):
+        href = a.get("href") or ""
+        if href.startswith("#") or href.startswith("mailto:"):
             continue
-            
-        # 2. Find Sections or Articles within Collections
-        links = c_soup.find_all('a', href=True)
-        for a in links:
-            href = a['href']
-            if '/en/articles/' in href:
-                full_a_url = BASE_URL + href if href.startswith('/') else href
-                article_links.add(full_a_url)
-            elif '/en/sections/' in href:
-                # Sometimes articles are inside sections
-                full_s_url = BASE_URL + href if href.startswith('/') else href
-                s_soup = get_soup(full_s_url)
-                if s_soup:
-                    s_links = s_soup.find_all('a', href=True)
-                    for sa in s_links:
-                        s_href = sa['href']
-                        if '/en/articles/' in s_href:
-                            full_sa_url = BASE_URL + s_href if s_href.startswith('/') else s_href
-                            article_links.add(full_sa_url)
+        normalized = normalize_url(urljoin(current_url, href))
+        if normalized:
+            links.append(normalized)
+    return links
 
-    print(f"Found {len(article_links)} unique articles. Starting to scrape content...")
-    
-    scraped_data = []
-    for url in article_links:
-        data = extract_article_content(url)
-        if data:
-            scraped_data.append(data)
-        time.sleep(0.5) # Be polite
-        
-    # Save to src/constants
-    output_path = os.path.join('src', 'constants', 'helpCenter.json')
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    with open(output_path, 'w', encoding='utf-8') as f:
-        json.dump(scraped_data, f, ensure_ascii=False, indent=2)
-        
-    print(f"Successfully scraped {len(scraped_data)} articles. Saved to {output_path}")
+
+def extract_text(element) -> str:
+    if not element:
+        return ""
+    for tag in element.select("script, style, nav, footer, noscript"):
+        tag.decompose()
+    text = element.get_text("\n", strip=True)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def extract_article(soup: BeautifulSoup, url: str) -> dict | None:
+    if "/articles/" not in url:
+        return None
+
+    title = ""
+    og = soup.find("meta", property="og:title")
+    if og and og.get("content"):
+        title = og["content"].split(" | ")[0].strip()
+    if not title:
+        heading = soup.find(["h1", "h2"])
+        title = heading.get_text(" ", strip=True) if heading else ""
+    title = re.sub(r"\s+", " ", title).strip()
+
+    body = (
+        soup.select_one("article")
+        or soup.select_one(".article")
+        or soup.select_one(".intercom-interblocks")
+        or soup.select_one("[class*='article-body']")
+        or soup.select_one("main")
+        or soup.body
+    )
+    content = extract_text(body)
+    if not title or len(content) < 80:
+        return None
+
+    return {
+        "title": title,
+        "url": url.split("?")[0],
+        "content": content,
+    }
+
+
+def crawl() -> list[dict]:
+    queue = deque([START])
+    visited: set[str] = set()
+    articles: dict[str, dict] = {}
+
+    while queue and len(visited) < MAX_PAGES:
+        url = queue.popleft()
+        if url in visited:
+            continue
+        visited.add(url)
+
+        try:
+            response = session.get(url, timeout=30)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            print(f"SKIP {url}: {exc}")
+            continue
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        article = extract_article(soup, url)
+        if article:
+            ident = article_id(article["url"]) or article["url"]
+            if ident not in articles:
+                articles[ident] = article
+                print(f"ARTICLE {len(articles):03d} {article['title']}")
+
+        for link in extract_links(soup, url):
+            path = urlparse(link).path
+            if any(token in path for token in ("/articles/", "/collections/", "/sections/")) or link.rstrip("/") == BASE:
+                if link not in visited:
+                    queue.append(link)
+
+        time.sleep(DELAY_SECONDS)
+
+    return sorted(articles.values(), key=lambda item: item["url"])
+
+
+def main() -> None:
+    print("Crawling Logiwa Help Center...")
+    articles = crawl()
+    OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+    OUTPUT.write_text(json.dumps(articles, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"Wrote {len(articles)} articles to {OUTPUT}")
+
 
 if __name__ == "__main__":
     main()

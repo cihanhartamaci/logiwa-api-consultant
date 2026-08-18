@@ -47,6 +47,29 @@
   margin-top: 2px;
 }
 
+.sidebar-guide {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 1rem;
+}
+
+.setup-hint {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 0.78rem;
+  line-height: 1.45;
+  margin: 0 0 1.5rem;
+  padding-left: 1.1rem;
+}
+
+.setup-hint li {
+  margin-bottom: 0.35rem;
+}
+
+.setup-hint li:last-child {
+  margin-bottom: 0;
+}
+
 .api-stats {
   margin-top: auto;
   padding: 1.25rem;
@@ -384,6 +407,25 @@
 .connected-badge {
   border-color: rgba(74, 222, 128, 0.3) !important;
   box-shadow: 0 0 10px rgba(74, 222, 128, 0.1) !important;
+}
+
+.connected-badge.pollinations {
+  border-color: rgba(251, 191, 36, 0.4) !important;
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.15) !important;
+}
+
+.fallback-ready-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: #FBBF24;
+  font-size: 0.72rem;
+  font-weight: 500;
+  white-space: nowrap;
+  background: rgba(251, 191, 36, 0.08);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 100px;
+  padding: 0.15rem 0.55rem;
 }
 
 .disconnect-btn {

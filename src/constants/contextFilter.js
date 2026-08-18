@@ -25,6 +25,8 @@ const synonymGroups = [
   ["create", "add", "post", "olustur"],
   ["update", "edit", "put", "patch", "guncelle"],
   ["delete", "remove", "cancel", "sil", "iptal"],
+  ["lql", "query", "filter", "filtre"],
+  ["webhook", "subscription", "callback"],
 ];
 
 const synonymMap = new Map();
@@ -81,23 +83,105 @@ function chunkText(text, chunkSize = 260, overlap = 40) {
   return chunks;
 }
 
-function flattenSearchableValues(value, output = []) {
-  if (value == null) return output;
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    output.push(String(value));
-    return output;
+function stripHtml(text) {
+  return String(text || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function slimSchema(schema, depth = 0) {
+  if (!schema || typeof schema !== "object") {
+    return { type: "object" };
   }
-  if (Array.isArray(value)) {
-    value.forEach(item => flattenSearchableValues(item, output));
-    return output;
+  if (schema.$ref) return { $ref: schema.$ref };
+  if (depth > 2) {
+    return { type: schema.type || "object" };
   }
-  if (typeof value === "object") {
-    Object.entries(value).forEach(([key, child]) => {
-      output.push(key);
-      flattenSearchableValues(child, output);
+
+  const slim = {};
+  if (schema.type) slim.type = schema.type;
+  if (schema.format) slim.format = schema.format;
+  if (schema.required) slim.required = schema.required;
+  if (schema.enum) slim.enum = schema.enum;
+  if (schema.nullable) slim.nullable = schema.nullable;
+  if (schema.description) slim.description = String(schema.description).slice(0, 160);
+  if (schema.properties) {
+    slim.properties = {};
+    Object.entries(schema.properties).forEach(([name, prop]) => {
+      slim.properties[name] = slimSchema(prop, depth + 1);
     });
   }
-  return output;
+  if (schema.items) slim.items = slimSchema(schema.items, depth + 1);
+  return slim;
+}
+
+function collectSchemaNamesFromValue(value, names = []) {
+  if (!value || typeof value !== "object") return names;
+  if (typeof value.$ref === "string") {
+    const match = value.$ref.match(/^#\/components\/schemas\/(.+)$/);
+    if (match) names.push(match[1]);
+  }
+  Object.values(value).forEach((child) => collectSchemaNamesFromValue(child, names));
+  return names;
+}
+
+function slimRequestBody(requestBody) {
+  if (!requestBody) return undefined;
+  const content = requestBody.content || {};
+  const jsonContent =
+    content["application/json"] ||
+    content["application/json-patch+json"] ||
+    Object.values(content)[0];
+  const schema = jsonContent?.schema;
+  return {
+    required: requestBody.required,
+    schema: schema ? slimSchema(schema) : undefined,
+  };
+}
+
+function slimOperation(operation) {
+  const description = stripHtml(operation.description || "").slice(0, 500);
+  const parameters = (operation.parameters || []).slice(0, 12).map((param) => ({
+    name: param.name,
+    in: param.in,
+    required: param.required,
+    schema: param.schema
+      ? { type: param.schema.type, format: param.schema.format }
+      : undefined,
+  }));
+
+  const successResponses = {};
+  ["200", "201", "204"].forEach((code) => {
+    if (!operation.responses?.[code]) return;
+    const response = operation.responses[code];
+    const jsonSchema = response.content?.["application/json"]?.schema;
+    successResponses[code] = {
+      description: stripHtml(response.description || "").slice(0, 160),
+      schema: jsonSchema ? slimSchema(jsonSchema) : undefined,
+    };
+  });
+
+  return {
+    tags: operation.tags,
+    summary: operation.summary,
+    description: description || undefined,
+    parameters: parameters.length ? parameters : undefined,
+    requestBody: slimRequestBody(operation.requestBody),
+    responses: Object.keys(successResponses).length ? successResponses : undefined,
+  };
+}
+
+function buildOperationSearchText(path, method, operation) {
+  const paramNames = (operation.parameters || []).map((param) => param.name).join(" ");
+  const schemaNames = collectSchemaNamesFromValue(operation.requestBody || {});
+  collectSchemaNamesFromValue(operation.responses || {}, schemaNames);
+  return [
+    method.toUpperCase(),
+    path,
+    operation.summary || "",
+    (operation.tags || []).join(" "),
+    stripHtml(operation.description || "").slice(0, 800),
+    paramNames,
+    [...new Set(schemaNames)].join(" "),
+  ].join(" ");
 }
 
 function createIndex(documents) {
@@ -194,9 +278,9 @@ Object.entries(swaggerDoc.paths || {}).forEach(([path, methods]) => {
       id: `swagger-${swaggerDocuments.length}`,
       path,
       method: method.toLowerCase(),
-      operation,
+      operation: slimOperation(operation),
       title,
-      searchText: `${title} ${flattenSearchableValues(operation).join(" ")}`,
+      searchText: buildOperationSearchText(path, method, operation),
     });
   });
 });
@@ -204,7 +288,7 @@ Object.entries(swaggerDoc.paths || {}).forEach(([path, methods]) => {
 const helpCenterIndex = createIndex(helpCenterDocuments);
 const swaggerIndex = createIndex(swaggerDocuments);
 
-export function getRelevantArticles(prompt, limit = 6) {
+export function getRelevantArticles(prompt, limit = 4) {
   return rankIndex(helpCenterIndex, prompt, limit, "articleId").map(article => ({
     sourceId: `HC-${article.articleId.replace("help-", "")}-${article.chunkIndex + 1}`,
     title: article.title,
@@ -225,7 +309,7 @@ function collectReferencedSchemas(value, schemaNames = new Set()) {
   return schemaNames;
 }
 
-export function getRelevantSwagger(prompt, limit = 8) {
+export function getRelevantSwagger(prompt, limit = 5) {
   const topOperations = rankIndex(swaggerIndex, prompt, limit);
   const miniSwagger = {
     openapi: swaggerDoc.openapi,
@@ -249,25 +333,33 @@ export function getRelevantSwagger(prompt, limit = 8) {
     };
   });
 
-  const pendingSchemas = [...collectReferencedSchemas(miniSwagger.paths)];
+  const pendingSchemas = [...collectReferencedSchemas(miniSwagger.paths)].map((name) => ({
+    name,
+    hop: 0,
+  }));
   const processedSchemas = new Set();
-  while (pendingSchemas.length > 0) {
-    const schemaName = pendingSchemas.shift();
+  const maxSchemas = 24;
+  const maxHops = 2;
+
+  while (pendingSchemas.length > 0 && Object.keys(miniSwagger.components.schemas).length < maxSchemas) {
+    const { name: schemaName, hop } = pendingSchemas.shift();
     if (processedSchemas.has(schemaName)) continue;
     processedSchemas.add(schemaName);
     const schema = swaggerDoc.components?.schemas?.[schemaName];
-    if (schema) {
-      miniSwagger.components.schemas[schemaName] = schema;
-      collectReferencedSchemas(schema).forEach(nestedName => {
-        if (!processedSchemas.has(nestedName)) pendingSchemas.push(nestedName);
-      });
-    }
+    if (!schema) continue;
+    miniSwagger.components.schemas[schemaName] = slimSchema(schema);
+    if (hop + 1 >= maxHops) continue;
+    collectReferencedSchemas(schema).forEach((nestedName) => {
+      if (!processedSchemas.has(nestedName)) {
+        pendingSchemas.push({ name: nestedName, hop: hop + 1 });
+      }
+    });
   }
 
   return { document: miniSwagger, sources };
 }
 
-export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 8 } = {}) {
+export function searchDocumentation(prompt, { helpLimit = 4, swaggerLimit = 5 } = {}) {
   return {
     query: prompt,
     coverage: {

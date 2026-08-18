@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Bot, Send, User, Zap, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2 } from 'lucide-react';
-import { generateConsultantResponse } from './services/gemini';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import './App.css';
 
@@ -22,7 +21,7 @@ function App() {
     () => localStorage.getItem('logiwa_pollinations_fallback') !== 'false'
   );
   const [isKeyValid, setIsKeyValid] = useState(
-    () => localStorage.getItem('logiwa_api_key')?.startsWith("AIzaSy") || false
+    () => looksLikeGeminiApiKey(localStorage.getItem('logiwa_api_key'))
   );
   
   const messagesEndRef = useRef(null);
@@ -79,26 +78,17 @@ function App() {
     scrollToBottom();
   }, [messages, isLoading, toolStatus]);
 
-  const validateApiKey = async () => {
+  const pollinationsReady = enablePollinationsFallback && Boolean(pollinationsKey.trim());
+  const canAsk = isKeyValid || pollinationsReady;
+
+  const validateApiKey = () => {
     if (!apiKey) return;
-    setIsLoading(true);
-    try {
-      if (!apiKey.startsWith("AIzaSy")) {
-         throw new Error("Invalid API Key format. It should start with 'AIzaSy'.");
-      }
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-      await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: "Hello" }] }],
-        generationConfig: { maxOutputTokens: 1 }
-      });
-      setIsKeyValid(true);
-    } catch (error) {
-       alert("API Key Validation Failed: " + error.message);
-       setIsKeyValid(false);
-    } finally {
-       setIsLoading(false);
+    if (!looksLikeGeminiApiKey(apiKey)) {
+      alert("Invalid Gemini API key format. Keys start with AIza and are at least 24 characters.");
+      setIsKeyValid(false);
+      return;
     }
+    setIsKeyValid(true);
   };
 
   const handleInputChange = (e) => {
@@ -127,8 +117,8 @@ function App() {
     const trimmedInput = input.trim();
     if (!trimmedInput || isLoading) return;
 
-    if (!isKeyValid) {
-      alert("Please connect a valid Gemini API Key first.");
+    if (!canAsk) {
+      alert("Connect a Gemini API key, or enable Pollinations fallback and paste a free key from https://enter.pollinations.ai");
       return;
     }
 
@@ -153,7 +143,13 @@ function App() {
           if (toolName === 'searchSwagger') setToolStatus(`Searching API Docs for "${args.query}"...`);
           if (toolName === 'rateLimitWait') setToolStatus(`Rate limit exceeded. Waiting ${args.seconds} seconds...`);
           if (toolName === 'geminiModel') setToolStatus(`Asking Gemini (${args.model})...`);
-          if (toolName === 'geminiModelFailed') setToolStatus(`Gemini ${args.model} failed — trying next model...`);
+          if (toolName === 'geminiModelFailed') {
+            setToolStatus(
+              args.rateLimited
+                ? `Gemini ${args.model} hit a rate limit — switching to Pollinations...`
+                : `Gemini ${args.model} failed — trying next model...`
+            );
+          }
           if (toolName === 'fallbackProvider') {
             const modelLabel = args.model ? ` (${args.model})` : '';
             setToolStatus(`Gemini unavailable — switching to free Pollinations fallback${modelLabel}...`);
@@ -232,9 +228,14 @@ function App() {
         </div>
 
         <div style={{ flex: 1 }}>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '2rem' }}>
-            I am your advanced AI assistant for the Logiwa API. Ask me anything about endpoints, webhooks, authentication, or LQL filtering.
+          <p className="sidebar-guide">
+            Ask about Logiwa Open API v3.1: auth, LQL, shipment orders, inventory, webhooks, and Help Center how-tos. Answers are grounded in the live Swagger spec and Intercom articles.
           </p>
+          <ul className="setup-hint">
+            <li>Gemini key (optional if Pollinations is on)</li>
+            <li>Pollinations fallback uses a shorter prompt to stay within rate limits</li>
+            <li>Keys stay in this browser only</li>
+          </ul>
           
           {messages.length > 0 && (
             <button className="clear-chat-btn" onClick={handleClearHistory}>
@@ -266,11 +267,11 @@ function App() {
           {isKeyValid ? (
             <div className="api-key-container connected-badge">
               <CheckCircle size={16} color="#4ADE80" />
-              <span style={{ color: '#4ADE80', fontSize: '0.85rem', fontWeight: '500' }}>Connected</span>
+              <span style={{ color: '#4ADE80', fontSize: '0.85rem', fontWeight: '500' }}>Gemini connected</span>
               <button 
                  onClick={() => { setIsKeyValid(false); setApiKey(''); }}
                  className="disconnect-btn"
-                 title="Disconnect API Key"
+                 title="Disconnect Gemini API Key"
               >
                 ✕
               </button>
@@ -311,6 +312,12 @@ function App() {
                 title="Free key from https://enter.pollinations.ai — required because Pollinations no longer allows anonymous text calls"
               />
             )}
+            {pollinationsReady && !isKeyValid && (
+              <span className="connected-badge pollinations fallback-ready-hint">
+                <CheckCircle size={14} color="#FBBF24" />
+                Ready
+              </span>
+            )}
           </div>
         </div>
 
@@ -320,7 +327,7 @@ function App() {
               <Bot className="welcome-icon" />
               <h1 className="welcome-title text-gradient">How can I assist you?</h1>
               <p className="welcome-text">
-                Need help integrating with Logiwa? I can search the documentation, generate code snippets, explain complex LQL queries, and even learn from you!
+                Connect Gemini for the full consultant, or use a free Pollinations key as fallback. I search Open API v3.1 and the Logiwa Help Center before answering.
               </p>
               
               <div className="suggested-prompts">
@@ -421,7 +428,7 @@ function App() {
             <textarea
               ref={textareaRef}
               className="chat-input"
-              placeholder="Ask anything about Logiwa APIs..."
+              placeholder={canAsk ? "Ask anything about Logiwa APIs..." : "Add a Gemini or Pollinations key to start..."}
               value={input}
               onChange={handleInputChange}
               onKeyDown={handleKeyDown}
@@ -430,7 +437,7 @@ function App() {
             <button 
               className="send-btn" 
               onClick={handleSend}
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || !canAsk}
             >
               <Send size={20} />
             </button>

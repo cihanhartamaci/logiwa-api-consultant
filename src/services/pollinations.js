@@ -1,6 +1,12 @@
 const POLLINATIONS_CHAT_URL = 'https://gen.pollinations.ai/v1/chat/completions';
 const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 
+/** Short prompt for fallback models — never send the full Gemini system instruction. */
+export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are a Logiwa WMS API consultant.
+Answer only from the retrieved Help Center and Swagger sources in the user message.
+Cite [HC-...] and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
+If sources are insufficient, say so. Be concise.`;
+
 /** Cheap / free-tier friendly models, tried in order. */
 export const POLLINATIONS_FALLBACK_MODELS = [
   'openai-fast',
@@ -28,7 +34,7 @@ export function compactDocumentationSources(sources) {
     content: truncate(article.content, 900),
   }));
 
-  const swaggerSources = (sources?.swagger?.sources || []).slice(0, 6).map((item) => ({
+  const swaggerSources = (sources?.swagger?.sources || []).slice(0, 5).map((item) => ({
     sourceId: item.sourceId,
     method: item.method,
     path: item.path,
@@ -37,7 +43,7 @@ export function compactDocumentationSources(sources) {
 
   const paths = {};
   Object.entries(sources?.swagger?.document?.paths || {})
-    .slice(0, 6)
+    .slice(0, 5)
     .forEach(([path, methods]) => {
       paths[path] = {};
       Object.entries(methods || {}).forEach(([method, operation]) => {
@@ -65,7 +71,10 @@ export function compactDocumentationSources(sources) {
       sources: swaggerSources,
       document: {
         openapi: sources?.swagger?.document?.openapi,
-        info: sources?.swagger?.document?.info,
+        info: {
+          title: sources?.swagger?.document?.info?.title,
+          version: sources?.swagger?.document?.info?.version,
+        },
         paths,
       },
     },
@@ -85,6 +94,11 @@ function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
 
   messages.push({ role: 'user', content: groundedUserPrompt });
   return messages;
+}
+
+function isPollinationsAuthError(error) {
+  const message = String(error?.message || '');
+  return /\(401\)|\(403\)/.test(message);
 }
 
 function authHeaders(apiKey) {
@@ -196,10 +210,22 @@ export async function generatePollinationsFallback({
       return await requestTextPost({ apiKey, model, messages });
     } catch (textError) {
       errors.push(textError.message);
+      if (isPollinationsAuthError(textError)) {
+        throw new Error(
+          'Pollinations rejected the API key (401/403). Create a free key at https://enter.pollinations.ai and paste it in the Pollinations field.',
+          { cause: textError }
+        );
+      }
       try {
         return await requestChatCompletion({ apiKey, model, messages });
       } catch (chatError) {
         errors.push(chatError.message);
+        if (isPollinationsAuthError(chatError)) {
+          throw new Error(
+            'Pollinations rejected the API key (401/403). Create a free key at https://enter.pollinations.ai and paste it in the Pollinations field.',
+            { cause: chatError }
+          );
+        }
       }
     }
   }
