@@ -46,9 +46,10 @@
 }
 
 .logo-text {
-  font-size: 1.2rem;
+  font-size: 1.55rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
   color: var(--ink);
 }
 
@@ -463,6 +464,25 @@
   border: 1px solid var(--glass-border);
   border-bottom-left-radius: 6px;
   backdrop-filter: blur(10px);
+}
+
+.typewriter-output {
+  position: relative;
+}
+
+.typing-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  background: var(--accent-primary);
+  border-radius: 1px;
+  vertical-align: text-bottom;
+  animation: caret-blink 0.9s step-end infinite;
+}
+
+@keyframes caret-blink {
+  50% { opacity: 0; }
 }
 
 .avatar {

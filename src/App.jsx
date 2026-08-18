@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
 import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
+import TypewriterMarkdown from './components/TypewriterMarkdown';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -58,7 +58,15 @@ function App() {
         if (hoursPassed > TTL_HOURS) {
           localStorage.removeItem(HISTORY_KEY);
         } else {
-          setMessages(data);
+          setMessages(
+            Array.isArray(data)
+              ? data.map((msg) => {
+                  const rest = { ...msg };
+                  delete rest.animate;
+                  return rest;
+                })
+              : data
+          );
         }
       } catch (e) {
         console.error("Failed to load history", e);
@@ -71,7 +79,11 @@ function App() {
     if (messages.length > 0) {
       localStorage.setItem(HISTORY_KEY, JSON.stringify({
         timestamp: Date.now(),
-        data: messages
+        data: messages.map((msg) => {
+          const rest = { ...msg };
+          delete rest.animate;
+          return rest;
+        })
       }));
     }
   }, [messages]);
@@ -144,7 +156,10 @@ function App() {
     }
 
     const newUserMessage = { role: 'user', content: trimmedInput };
-    setMessages((prev) => [...prev, newUserMessage]);
+    setMessages((prev) => [
+      ...prev.map((msg) => (msg.animate ? { ...msg, animate: false } : msg)),
+      newUserMessage,
+    ]);
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -192,7 +207,8 @@ function App() {
           role: 'model', 
           content: responseText,
           proposedKnowledge: currentProposedKnowledge,
-          approved: false
+          approved: false,
+          animate: true
         }
       ]);
     } catch (error) {
@@ -208,6 +224,15 @@ function App() {
       setIsLoading(false);
       setToolStatus('');
     }
+  };
+
+  const handleStreamComplete = (index) => {
+    setMessages((prev) => {
+      if (!prev[index]?.animate) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], animate: false };
+      return next;
+    });
   };
 
   const handleApproveKnowledge = (index, knowledge) => {
@@ -241,8 +266,8 @@ function App() {
         <div className="sidebar-header">
           <img src={logiwaLogo} alt="Logiwa" className="brand-logo" />
           <div className="brand-copy">
-            <div className="logo-text">Logiwa API</div>
-            <div className="logo-sub">Operations Expert</div>
+            <div className="logo-text text-gradient">AIntegration</div>
+            <div className="logo-sub">Logiwa Open API</div>
           </div>
         </div>
 
@@ -371,7 +396,7 @@ function App() {
                   <Waypoints size={14} /> {SOURCE_STATS.swaggerOperations} Open API {SOURCE_STATS.openApiVersion} operations
                 </span>
               </div>
-              <h1 className="welcome-title">Logiwa API — Operations Expert</h1>
+              <h1 className="welcome-title text-gradient">AIntegration</h1>
               <p className="welcome-text">
                 I search the live Logiwa spec and Help Center before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
@@ -451,10 +476,15 @@ function App() {
                       <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                     ) : (
                       <>
-                        <ReactMarkdown className="markdown-body">{msg.content}</ReactMarkdown>
+                        <TypewriterMarkdown
+                          content={msg.content}
+                          animate={Boolean(msg.animate)}
+                          onUpdate={scrollToBottom}
+                          onComplete={() => handleStreamComplete(idx)}
+                        />
                         
                         {/* Knowledge Proposal Card */}
-                        {msg.proposedKnowledge && (
+                        {msg.proposedKnowledge && !msg.animate && (
                           <div className="knowledge-card animate-fade-in">
                             <div className="knowledge-header">
                               <Save size={18} />
