@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Key, Lock, User } from 'lucide-react';
 import logiwaLogo from '../assets/logiwa-logo.png';
 
-const AUTH_STORAGE_KEY = 'aintegration_signed_in';
+export const AUTH_STORAGE_KEY = 'aintegration_signed_in';
 const LOGIN_USERNAME = 'integrationsteam';
 const LOGIN_PASSWORD = 'Integration.2026';
 

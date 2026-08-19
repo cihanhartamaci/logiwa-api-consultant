@@ -4,8 +4,9 @@ const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 /** Short prompt for fallback models — never send the full Gemini system instruction. */
 export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are AIntegration, a Logiwa WMS API expert.
 This is an ongoing chat. Continue the same topic; resolve follow-ups from earlier turns.
-Answer from the retrieved Help Center and Swagger sources plus the conversation so far.
-Cite [HC-...] and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
+Answer from the retrieved Help Center, Magna-Tiles knowledge docs, and Swagger sources plus the conversation so far.
+Blend the operational workflow with implementation guides and the API contract: method, path, request fields, and response fields.
+Cite [HC-...], [KB-...], and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
 If sources and prior turns are insufficient, say so. Be concise.`;
 
 /**
@@ -118,8 +119,30 @@ function truncate(text, max = 1200) {
   return `${value.slice(0, max)}…`;
 }
 
+function compactOperation(operation) {
+  if (!operation || typeof operation !== 'object') return operation;
+  return {
+    ...operation,
+    summary: truncate(operation.summary, 240),
+    description: operation.description ? truncate(operation.description, 500) : undefined,
+    parameters: (operation.parameters || []).slice(0, 16),
+    requestBody: operation.requestBody,
+    responses: operation.responses,
+  };
+}
+
+function mapKnowledge(article) {
+  return {
+    sourceId: article.sourceId,
+    title: article.title,
+    url: article.url,
+    origin: article.origin,
+    content: truncate(article.content, 1200),
+  };
+}
+
 /**
- * Compress retrieved Logiwa sources so free models stay within context limits.
+ * Compress Help Center prose for smaller models, but keep Swagger request/response contracts.
  */
 export function compactDocumentationSources(sources) {
   const helpCenter = (sources?.helpCenter || []).slice(0, 4).map((article) => ({
@@ -129,49 +152,78 @@ export function compactDocumentationSources(sources) {
     content: truncate(article.content, 900),
   }));
 
-  const swaggerSources = (sources?.swagger?.sources || []).slice(0, 5).map((item) => ({
+  const knowledge = (sources?.knowledge || []).slice(0, 4).map(mapKnowledge);
+
+  const swaggerSources = (sources?.swagger?.sources || []).slice(0, 6).map((item) => ({
     sourceId: item.sourceId,
     method: item.method,
     path: item.path,
     summary: truncate(item.summary, 240),
   }));
 
+  const document = sources?.swagger?.document || {};
   const paths = {};
-  Object.entries(sources?.swagger?.document?.paths || {})
-    .slice(0, 5)
-    .forEach(([path, methods]) => {
-      paths[path] = {};
-      Object.entries(methods || {}).forEach(([method, operation]) => {
-        paths[path][method] = {
-          summary: operation?.summary || '',
-          description: truncate(operation?.description, 400),
-          parameters: (operation?.parameters || []).slice(0, 8).map((param) => ({
-            name: param.name,
-            in: param.in,
-            required: param.required,
-            description: truncate(param.description, 160),
-          })),
-          requestBody: operation?.requestBody
-            ? { description: truncate(operation.requestBody.description, 240) }
-            : undefined,
-        };
-      });
+  Object.entries(document.paths || {}).forEach(([path, methods]) => {
+    paths[path] = {};
+    Object.entries(methods || {}).forEach(([method, operation]) => {
+      paths[path][method] = compactOperation(operation);
     });
+  });
+
+  const schemas = document.components?.schemas || {};
+  const schemaEntries = Object.entries(schemas).slice(0, 24);
 
   return {
     query: sources?.query,
     coverage: sources?.coverage,
     helpCenter,
+    knowledge,
     swagger: {
       sources: swaggerSources,
       document: {
-        openapi: sources?.swagger?.document?.openapi,
+        openapi: document.openapi,
         info: {
-          title: sources?.swagger?.document?.info?.title,
-          version: sources?.swagger?.document?.info?.version,
+          title: document.info?.title,
+          version: document.info?.version,
         },
         paths,
+        components: schemaEntries.length
+          ? { schemas: Object.fromEntries(schemaEntries) }
+          : undefined,
       },
+    },
+  };
+}
+
+/** Full retrieved contracts for Gemini — do not drop request/response schemas. */
+export function prepareGeminiSources(sources) {
+  const helpCenter = (sources?.helpCenter || []).slice(0, 6).map((article) => ({
+    sourceId: article.sourceId,
+    title: article.title,
+    url: article.url,
+    content: String(article.content || '').slice(0, 2200),
+    score: article.score,
+  }));
+
+  const knowledge = (sources?.knowledge || []).slice(0, 4).map((article) => ({
+    sourceId: article.sourceId,
+    title: article.title,
+    url: article.url,
+    origin: article.origin,
+    content: String(article.content || '').slice(0, 2200),
+    score: article.score,
+  }));
+
+  return {
+    query: sources?.query,
+    coverage: sources?.coverage,
+    blend:
+      'Use Help Center for Logiwa IO workflow, Magna-Tiles knowledge docs [KB-...] for implementation guides and example payloads, and Swagger paths/components.schemas for exact request and response fields. Cite [HC-...], [KB-...], and [API-...] IDs.',
+    helpCenter,
+    knowledge,
+    swagger: {
+      sources: (sources?.swagger?.sources || []).slice(0, 6),
+      document: sources?.swagger?.document || {},
     },
   };
 }

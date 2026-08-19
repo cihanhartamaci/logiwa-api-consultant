@@ -5,6 +5,7 @@ import {
   compactDocumentationSources,
   generatePollinationsFallback,
   POLLINATIONS_FALLBACK_SYSTEM_PROMPT,
+  prepareGeminiSources,
 } from './pollinations';
 
 const GEMINI_MODELS = [
@@ -217,11 +218,13 @@ export function buildConversationSearchQuery(chatHistory = []) {
 }
 
 function buildGroundedPrompt(userMessage, sources, { allowToolRefinement = true, conversationContext = '' } = {}) {
-  const compact = compactDocumentationSources(sources);
-  const safeSources = JSON.stringify(compact).replace(/"\$ref"/g, '"_ref"');
+  const payload = allowToolRefinement
+    ? prepareGeminiSources(sources)
+    : compactDocumentationSources(sources);
+  const safeSources = JSON.stringify(payload).replace(/"\$ref"/g, '"_ref"');
   const toolHint = allowToolRefinement
-    ? 'If these sources are insufficient, call searchDocumentation with a refined query before answering.'
-    : 'Answer only from these sources. Do not invent API fields.';
+    ? 'If these sources are insufficient, call searchDocumentation with a refined query before answering. Blend Help Center, Magna-Tiles knowledge docs, and Swagger request/response schemas.'
+    : 'Answer only from these sources. Do not invent API fields. List request and response fields from the attached schemas.';
   const conversationBlock = conversationContext
     ? `
 --- CONVERSATION SO FAR ---
@@ -342,11 +345,12 @@ async function generateWithGeminiModel({
         if (name === 'searchDocumentation') {
           const { searchDocumentation } = await loadDocumentationModule();
           const documentation = searchDocumentation(args.query, {
-            helpLimit: 4,
-            swaggerLimit: 5,
+            helpLimit: 6,
+            swaggerLimit: 6,
+            knowledgeLimit: 4,
           });
-          const compact = compactDocumentationSources(documentation);
-          const safeString = JSON.stringify(compact).replace(/"\$ref"/g, '"_ref"');
+          const payload = prepareGeminiSources(documentation);
+          const safeString = JSON.stringify(payload).replace(/"\$ref"/g, '"_ref"');
           functionResponseData = { results: [safeString] };
         } else if (name === 'proposeLearnedKnowledge') {
           if (onKnowledgeProposed) onKnowledgeProposed(args.topic, args.content);
@@ -467,8 +471,9 @@ export async function generateConsultantResponse(
   if (onToolCall) onToolCall('searchDocumentation', { query: lastUserMessage });
   const { searchDocumentation } = await loadDocumentationModule();
   const initialSources = searchDocumentation(searchQuery || lastUserMessage, {
-    helpLimit: 4,
-    swaggerLimit: 5,
+    helpLimit: 6,
+    swaggerLimit: 6,
+    knowledgeLimit: 4,
   });
   const groundedPrompt = buildGroundedPrompt(lastUserMessage, initialSources, {
     conversationContext,

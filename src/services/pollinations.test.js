@@ -7,6 +7,7 @@ import {
   pollinationsErrorKind,
   POLLINATIONS_FALLBACK_MODELS,
   POLLINATIONS_OFFICIAL_MODELS,
+  prepareGeminiSources,
   resetPollinationsModelCache,
 } from '../services/pollinations';
 
@@ -140,6 +141,27 @@ describe('pollinations fallback helpers', () => {
                 summary: 'Create purchase order',
                 description: 'B'.repeat(900),
                 parameters: [{ name: 'x', in: 'query', description: 'filter' }],
+                requestBody: {
+                  schema: { $ref: '#/components/schemas/PurchaseOrderCreateApiRequest' },
+                },
+                responses: {
+                  201: {
+                    description: 'Created',
+                    schema: { $ref: '#/components/schemas/GuidResult' },
+                  },
+                },
+              },
+            },
+          },
+          components: {
+            schemas: {
+              PurchaseOrderCreateApiRequest: {
+                required: ['clientIdentifier', 'code'],
+                type: 'object',
+                properties: {
+                  code: { type: 'string' },
+                  clientIdentifier: { type: 'string', format: 'uuid' },
+                },
               },
             },
           },
@@ -153,5 +175,63 @@ describe('pollinations fallback helpers', () => {
     expect(
       compact.swagger.document.paths['/v3.1/PurchaseOrder/create'].post.description.endsWith('…')
     ).toBe(true);
+    expect(
+      compact.swagger.document.paths['/v3.1/PurchaseOrder/create'].post.requestBody.schema._ref ||
+        compact.swagger.document.paths['/v3.1/PurchaseOrder/create'].post.requestBody.schema.$ref
+    ).toBe('#/components/schemas/PurchaseOrderCreateApiRequest');
+    expect(compact.swagger.document.components.schemas.PurchaseOrderCreateApiRequest.required).toContain(
+      'clientIdentifier'
+    );
+    expect(
+      compact.swagger.document.components.schemas.PurchaseOrderCreateApiRequest.properties.code.type
+    ).toBe('string');
+    expect(compact.swagger.document.paths['/v3.1/PurchaseOrder/create'].post.responses['201']).toBeTruthy();
+  });
+
+  it('keeps request and response schemas in the Gemini source payload', () => {
+    const payload = prepareGeminiSources({
+      query: 'create purchase order',
+      helpCenter: [
+        {
+          sourceId: 'HC-1-1',
+          title: 'Create a Purchase Order',
+          url: 'https://example.com/po',
+          content: 'Use the Purchase Order screen.',
+        },
+      ],
+      knowledge: [
+        {
+          sourceId: 'KB-0-1',
+          title: 'example create purchase order',
+          origin: 'Magna-Tiles / API_Support_Doc.zip',
+          content: 'Example JSON payload from example_create_purchase_order.json',
+        },
+      ],
+      swagger: {
+        sources: [{ sourceId: 'API-0', method: 'POST', path: '/v3.1/PurchaseOrder/create' }],
+        document: {
+          paths: {
+            '/v3.1/PurchaseOrder/create': {
+              post: {
+                requestBody: { schema: { $ref: '#/components/schemas/PurchaseOrderCreateApiRequest' } },
+              },
+            },
+          },
+          components: {
+            schemas: {
+              PurchaseOrderCreateApiRequest: {
+                required: ['code'],
+                properties: { code: { type: 'string' } },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    expect(payload.blend).toMatch(/request and response/i);
+    expect(payload.swagger.document.components.schemas.PurchaseOrderCreateApiRequest.required).toContain('code');
+    expect(payload.helpCenter[0].content).toContain('Purchase Order screen');
+    expect(payload.knowledge[0].sourceId).toBe('KB-0-1');
   });
 });

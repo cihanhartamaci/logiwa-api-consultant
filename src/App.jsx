@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink } from 'lucide-react';
+import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
-import LoginScreen from './components/LoginScreen';
+import LoginScreen, { AUTH_STORAGE_KEY } from './components/LoginScreen';
+import CinematicVideoOverlay, {
+  LOGIN_CINEMATIC_VIDEO_ID,
+  LOGOUT_CINEMATIC_VIDEO_ID,
+} from './components/CinematicVideoOverlay';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -46,8 +50,9 @@ function App() {
     () => looksLikeGeminiApiKey(localStorage.getItem('logiwa_api_key'))
   );
   const [isAuthenticated, setIsAuthenticated] = useState(
-    () => localStorage.getItem('aintegration_signed_in') === '1'
+    () => localStorage.getItem(AUTH_STORAGE_KEY) === '1'
   );
+  const [cinematic, setCinematic] = useState(null);
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -266,8 +271,43 @@ function App() {
     }
   };
 
+  const handleLoginSuccess = () => {
+    setCinematic({
+      videoId: LOGIN_CINEMATIC_VIDEO_ID,
+      mode: 'login',
+    });
+  };
+
+  const handleLogout = () => {
+    setCinematic({
+      videoId: LOGOUT_CINEMATIC_VIDEO_ID,
+      mode: 'logout',
+    });
+  };
+
+  const handleCinematicFinished = () => {
+    if (cinematic?.mode === 'login') {
+      setIsAuthenticated(true);
+    } else if (cinematic?.mode === 'logout') {
+      localStorage.removeItem(AUTH_STORAGE_KEY);
+      setIsAuthenticated(false);
+    }
+    setCinematic(null);
+  };
+
   if (!isAuthenticated) {
-    return <LoginScreen onSuccess={() => setIsAuthenticated(true)} />;
+    return (
+      <>
+        <LoginScreen onSuccess={handleLoginSuccess} />
+        {cinematic && (
+          <CinematicVideoOverlay
+            videoId={cinematic.videoId}
+            mode={cinematic.mode}
+            onFinished={handleCinematicFinished}
+          />
+        )}
+      </>
+    );
   }
 
   return (
@@ -291,6 +331,10 @@ function App() {
               <span className="source-stat-value">{SOURCE_STATS.swaggerOperations}</span>
               <span className="source-stat-label">API operations</span>
             </div>
+            <div className="source-stat">
+              <span className="source-stat-value">{SOURCE_STATS.knowledgeDocuments}</span>
+              <span className="source-stat-label">API support guides</span>
+            </div>
           </div>
 
           <div className="status-list">
@@ -305,7 +349,7 @@ function App() {
           </div>
 
           <p className="sidebar-guide">
-            Answers cite Open API {SOURCE_STATS.openApiVersion} and the Intercom Help Center. Keys stay in this browser.
+            Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and Magna-Tiles API support guides. Keys stay in this browser.
           </p>
           
           {messages.length > 0 && (
@@ -331,6 +375,10 @@ function App() {
           </div>
         </div>
         <p className="app-credit">Created by cihanhartamaci with help from Cursor.</p>
+        <button type="button" className="logout-btn" onClick={handleLogout}>
+          <LogOut size={16} style={{ marginRight: '8px' }} />
+          Log out
+        </button>
       </aside>
 
       {/* Main Content */}
@@ -393,6 +441,10 @@ function App() {
               </span>
             )}
           </div>
+          <button type="button" className="logout-btn logout-btn-top" onClick={handleLogout}>
+            <LogOut size={16} />
+            Log out
+          </button>
         </div>
 
         <div className="chat-container">
@@ -406,10 +458,13 @@ function App() {
                 <span className="welcome-chip">
                   <Waypoints size={14} /> {SOURCE_STATS.swaggerOperations} Open API {SOURCE_STATS.openApiVersion} operations
                 </span>
+                <span className="welcome-chip">
+                  <BookOpen size={14} /> {SOURCE_STATS.knowledgeDocuments} API support guides
+                </span>
               </div>
               <h1 className="welcome-title text-gradient">AIntegration</h1>
               <p className="welcome-text">
-                I search the live Logiwa spec and Help Center before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
+                I search the Logiwa spec, Help Center, and Magna-Tiles API support guides before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
 
               {!canAsk && (
@@ -582,6 +637,13 @@ function App() {
           </div>
         </div>
       </main>
+      {cinematic && (
+        <CinematicVideoOverlay
+          videoId={cinematic.videoId}
+          mode={cinematic.mode}
+          onFinished={handleCinematicFinished}
+        />
+      )}
     </div>
   );
 }

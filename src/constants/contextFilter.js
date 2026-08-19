@@ -1,5 +1,6 @@
 import swaggerDoc from './swagger.json';
 import helpCenterDoc from './helpCenter.json';
+import knowledgeDoc from './knowledgeDocs.json';
 
 const stopWords = new Set([
   "how", "do", "i", "what", "is", "the", "a", "to", "in", "for", "of", "and", "or", "with",
@@ -92,8 +93,8 @@ function slimSchema(schema, depth = 0) {
     return { type: "object" };
   }
   if (schema.$ref) return { $ref: schema.$ref };
-  if (depth > 2) {
-    return { type: schema.type || "object" };
+  if (depth > 4) {
+    return { type: schema.type || "object", format: schema.format };
   }
 
   const slim = {};
@@ -102,7 +103,11 @@ function slimSchema(schema, depth = 0) {
   if (schema.required) slim.required = schema.required;
   if (schema.enum) slim.enum = schema.enum;
   if (schema.nullable) slim.nullable = schema.nullable;
-  if (schema.description) slim.description = String(schema.description).slice(0, 160);
+  if (schema.minLength != null) slim.minLength = schema.minLength;
+  if (schema.maxLength != null) slim.maxLength = schema.maxLength;
+  if (schema.minimum != null) slim.minimum = schema.minimum;
+  if (schema.maximum != null) slim.maximum = schema.maximum;
+  if (schema.description) slim.description = String(schema.description).slice(0, 220);
   if (schema.properties) {
     slim.properties = {};
     Object.entries(schema.properties).forEach(([name, prop]) => {
@@ -110,6 +115,9 @@ function slimSchema(schema, depth = 0) {
     });
   }
   if (schema.items) slim.items = slimSchema(schema.items, depth + 1);
+  if (schema.allOf) slim.allOf = schema.allOf.map((part) => slimSchema(part, depth + 1));
+  if (schema.oneOf) slim.oneOf = schema.oneOf.map((part) => slimSchema(part, depth + 1));
+  if (schema.anyOf) slim.anyOf = schema.anyOf.map((part) => slimSchema(part, depth + 1));
   return slim;
 }
 
@@ -137,27 +145,41 @@ function slimRequestBody(requestBody) {
   };
 }
 
-function slimOperation(operation) {
-  const description = stripHtml(operation.description || "").slice(0, 500);
-  const parameters = (operation.parameters || []).slice(0, 12).map((param) => ({
-    name: param.name,
-    in: param.in,
-    required: param.required,
-    schema: param.schema
-      ? { type: param.schema.type, format: param.schema.format }
-      : undefined,
-  }));
+function pickResponseJsonSchema(response) {
+  const content = response?.content || {};
+  return (
+    content["application/json"]?.schema ||
+    content["application/json-patch+json"]?.schema ||
+    Object.values(content)[0]?.schema
+  );
+}
 
-  const successResponses = {};
-  ["200", "201", "204"].forEach((code) => {
-    if (!operation.responses?.[code]) return;
-    const response = operation.responses[code];
-    const jsonSchema = response.content?.["application/json"]?.schema;
-    successResponses[code] = {
+function slimResponses(responses) {
+  if (!responses) return undefined;
+  const slimmed = {};
+  Object.entries(responses).forEach(([code, response]) => {
+    const keep = /^2/.test(code) || code === "400";
+    if (!keep) return;
+    const jsonSchema = pickResponseJsonSchema(response);
+    slimmed[code] = {
       description: stripHtml(response.description || "").slice(0, 160),
       schema: jsonSchema ? slimSchema(jsonSchema) : undefined,
     };
   });
+  return Object.keys(slimmed).length ? slimmed : undefined;
+}
+
+function slimOperation(operation) {
+  const description = stripHtml(operation.description || "").slice(0, 800);
+  const parameters = (operation.parameters || []).slice(0, 16).map((param) => ({
+    name: param.name,
+    in: param.in,
+    required: param.required,
+    description: param.description ? stripHtml(param.description).slice(0, 180) : undefined,
+    schema: param.schema
+      ? { type: param.schema.type, format: param.schema.format, enum: param.schema.enum }
+      : undefined,
+  }));
 
   return {
     tags: operation.tags,
@@ -165,14 +187,40 @@ function slimOperation(operation) {
     description: description || undefined,
     parameters: parameters.length ? parameters : undefined,
     requestBody: slimRequestBody(operation.requestBody),
-    responses: Object.keys(successResponses).length ? successResponses : undefined,
+    responses: slimResponses(operation.responses),
   };
+}
+
+function collectFieldNamesFromValue(value, depth = 0, names = [], seen = new Set()) {
+  if (!value || typeof value !== "object" || depth > 5) return names;
+  if (Array.isArray(value)) {
+    value.forEach((item) => collectFieldNamesFromValue(item, depth + 1, names, seen));
+    return names;
+  }
+  if (typeof value.$ref === "string") {
+    const key = value.$ref.match(/^#\/components\/schemas\/(.+)$/)?.[1];
+    if (key && !seen.has(key)) {
+      seen.add(key);
+      names.push(key);
+      const resolved = swaggerDoc.components?.schemas?.[key];
+      if (resolved) collectFieldNamesFromValue(resolved, depth + 1, names, seen);
+    }
+  }
+  if (value.properties && typeof value.properties === "object") {
+    Object.keys(value.properties).forEach((name) => names.push(name));
+  }
+  Object.values(value).forEach((child) => {
+    if (child && typeof child === "object") collectFieldNamesFromValue(child, depth + 1, names, seen);
+  });
+  return names;
 }
 
 function buildOperationSearchText(path, method, operation) {
   const paramNames = (operation.parameters || []).map((param) => param.name).join(" ");
   const schemaNames = collectSchemaNamesFromValue(operation.requestBody || {});
   collectSchemaNamesFromValue(operation.responses || {}, schemaNames);
+  const fieldNames = collectFieldNamesFromValue(operation.requestBody);
+  collectFieldNamesFromValue(operation.responses, 0, fieldNames);
   return [
     method.toUpperCase(),
     path,
@@ -181,6 +229,7 @@ function buildOperationSearchText(path, method, operation) {
     stripHtml(operation.description || "").slice(0, 800),
     paramNames,
     [...new Set(schemaNames)].join(" "),
+    [...new Set(fieldNames)].join(" "),
   ].join(" ");
 }
 
@@ -285,10 +334,24 @@ Object.entries(swaggerDoc.paths || {}).forEach(([path, methods]) => {
   });
 });
 
+const knowledgeDocuments = knowledgeDoc.flatMap((article, articleIndex) =>
+  chunkText(article.content).map((content, chunkIndex) => ({
+    id: `kb-${articleIndex}-${chunkIndex}`,
+    articleId: `kb-${articleIndex}`,
+    title: article.title,
+    url: article.url,
+    origin: article.origin,
+    content,
+    chunkIndex,
+    searchText: `${article.title} ${article.origin || ""} ${article.filename || ""} ${content}`,
+  }))
+);
+
 const helpCenterIndex = createIndex(helpCenterDocuments);
 const swaggerIndex = createIndex(swaggerDocuments);
+const knowledgeIndex = createIndex(knowledgeDocuments);
 
-export function getRelevantArticles(prompt, limit = 4) {
+export function getRelevantArticles(prompt, limit = 6) {
   return rankIndex(helpCenterIndex, prompt, limit, "articleId").map(article => ({
     sourceId: `HC-${article.articleId.replace("help-", "")}-${article.chunkIndex + 1}`,
     title: article.title,
@@ -309,7 +372,19 @@ function collectReferencedSchemas(value, schemaNames = new Set()) {
   return schemaNames;
 }
 
-export function getRelevantSwagger(prompt, limit = 5) {
+export function getRelevantKnowledge(prompt, limit = 4) {
+  return rankIndex(knowledgeIndex, prompt, limit, "articleId").map((article) => ({
+    sourceId: `KB-${article.articleId.replace("kb-", "")}-${article.chunkIndex + 1}`,
+    title: article.title,
+    url: article.url,
+    origin: article.origin,
+    content: article.content,
+    chunk: article.chunkIndex + 1,
+    score: Number(article.score.toFixed(3)),
+  }));
+}
+
+export function getRelevantSwagger(prompt, limit = 6) {
   const topOperations = rankIndex(swaggerIndex, prompt, limit);
   const miniSwagger = {
     openapi: swaggerDoc.openapi,
@@ -338,8 +413,8 @@ export function getRelevantSwagger(prompt, limit = 5) {
     hop: 0,
   }));
   const processedSchemas = new Set();
-  const maxSchemas = 24;
-  const maxHops = 2;
+  const maxSchemas = 36;
+  const maxHops = 3;
 
   while (pendingSchemas.length > 0 && Object.keys(miniSwagger.components.schemas).length < maxSchemas) {
     const { name: schemaName, hop } = pendingSchemas.shift();
@@ -359,16 +434,70 @@ export function getRelevantSwagger(prompt, limit = 5) {
   return { document: miniSwagger, sources };
 }
 
-export function searchDocumentation(prompt, { helpLimit = 4, swaggerLimit = 5 } = {}) {
+function mergeBySourceId(primary, extra, limit) {
+  const seen = new Set();
+  const merged = [];
+  for (const item of [...primary, ...extra]) {
+    const key = item.sourceId;
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    merged.push(item);
+    if (merged.length >= limit) break;
+  }
+  return merged;
+}
+
+export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 6, knowledgeLimit = 4 } = {}) {
+  const seedHelp = getRelevantArticles(prompt, helpLimit);
+  const seedApi = getRelevantSwagger(prompt, swaggerLimit);
+  const seedKnowledge = getRelevantKnowledge(prompt, knowledgeLimit);
+  const helpQuery = [
+    prompt,
+    ...seedApi.sources.map((source) => `${source.method} ${source.path} ${source.summary}`),
+    ...seedKnowledge.map((article) => article.title),
+  ].join("\n");
+  const apiQuery = [
+    prompt,
+    ...seedHelp.map((article) => article.title),
+    ...seedKnowledge.map((article) => article.title),
+  ].join("\n");
+  const knowledgeQuery = [
+    prompt,
+    ...seedHelp.map((article) => article.title),
+    ...seedApi.sources.map((source) => `${source.method} ${source.path} ${source.summary}`),
+  ].join("\n");
+
   return {
     query: prompt,
     coverage: {
       indexedHelpCenterArticles: helpCenterDoc.length,
       indexedHelpCenterChunks: helpCenterDocuments.length,
       indexedSwaggerOperations: swaggerDocuments.length,
+      indexedSwaggerSchemas: Object.keys(swaggerDoc.components?.schemas || {}).length,
+      indexedKnowledgeDocuments: knowledgeDoc.length,
+      indexedKnowledgeChunks: knowledgeDocuments.length,
     },
-    helpCenter: getRelevantArticles(prompt, helpLimit),
-    swagger: getRelevantSwagger(prompt, swaggerLimit),
+    helpCenter: mergeBySourceId(seedHelp, getRelevantArticles(helpQuery, helpLimit), helpLimit),
+    swagger: (() => {
+      const blended = getRelevantSwagger(apiQuery, swaggerLimit);
+      const sources = mergeBySourceId(seedApi.sources, blended.sources, swaggerLimit);
+      const paths = {};
+      const schemas = {};
+      for (const pack of [seedApi, blended]) {
+        Object.assign(paths, pack.document?.paths || {});
+        Object.assign(schemas, pack.document?.components?.schemas || {});
+      }
+      return {
+        sources,
+        document: {
+          openapi: seedApi.document.openapi,
+          info: seedApi.document.info,
+          paths,
+          components: { schemas },
+        },
+      };
+    })(),
+    knowledge: mergeBySourceId(seedKnowledge, getRelevantKnowledge(knowledgeQuery, knowledgeLimit), knowledgeLimit),
   };
 }
 
@@ -378,5 +507,7 @@ export function getDocumentationIndexStats() {
     helpCenterChunks: helpCenterDocuments.length,
     swaggerOperations: swaggerDocuments.length,
     swaggerSchemas: Object.keys(swaggerDoc.components?.schemas || {}).length,
+    knowledgeDocuments: knowledgeDoc.length,
+    knowledgeChunks: knowledgeDocuments.length,
   };
 }
