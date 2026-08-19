@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
 import { getAllKnowledge } from './knowledgeBase';
+import { generateLocalDeskBriefing } from './localDesk';
 import {
   compactDocumentationSources,
   generatePollinationsFallback,
@@ -470,7 +471,7 @@ async function generateWithPollinations({
 }
 
 /**
- * Primary: Gemini. Fallback: free Pollinations models with the same retrieved Logiwa sources.
+ * Primary: Gemini. Fallback: Pollinations. Last resort: local documentation desk.
  */
 export async function generateConsultantResponse(
   apiKey,
@@ -510,6 +511,16 @@ export async function generateConsultantResponse(
     conversationContext,
   });
 
+  const runLocalDesk = (reason) => {
+    if (onToolCall) {
+      onToolCall('fallbackProvider', {
+        provider: 'localDesk',
+        reason,
+      });
+    }
+    return generateLocalDeskBriefing(lastUserMessage, initialSources);
+  };
+
   const runPollinations = async (reason) => {
     if (!pollinationsReady) {
       throw new Error(
@@ -535,7 +546,12 @@ export async function generateConsultantResponse(
   };
 
   if (!geminiReady) {
-    return runPollinations('Gemini key missing or invalid — using Pollinations');
+    try {
+      return await runPollinations('Gemini key missing or invalid — using Pollinations');
+    } catch (fallbackError) {
+      console.warn('Pollinations failed; opening local documentation desk.', fallbackError);
+      return runLocalDesk(fallbackError.message);
+    }
   }
 
   try {
@@ -550,18 +566,17 @@ export async function generateConsultantResponse(
   } catch (geminiError) {
     console.warn('Gemini failed; evaluating fallback...', geminiError);
 
-    if (!enablePollinationsFallback) {
-      throw new Error(explainGeminiKeyError(geminiError), { cause: geminiError });
+    if (pollinationsReady) {
+      try {
+        return await runPollinations(geminiError.message || 'empty or failed Gemini response');
+      } catch (fallbackError) {
+        console.warn('Pollinations fallback failed; opening local documentation desk.', fallbackError);
+        return runLocalDesk(
+          `Gemini: ${explainGeminiKeyError(geminiError)}. Pollinations: ${fallbackError.message}`
+        );
+      }
     }
 
-    try {
-      return await runPollinations(geminiError.message || 'empty or failed Gemini response');
-    } catch (fallbackError) {
-      console.error('Pollinations fallback failed:', fallbackError);
-      throw new Error(
-        `Gemini failed (${explainGeminiKeyError(geminiError)}). Pollinations fallback also failed: ${fallbackError.message}`,
-        { cause: fallbackError }
-      );
-    }
+    return runLocalDesk(explainGeminiKeyError(geminiError));
   }
 }

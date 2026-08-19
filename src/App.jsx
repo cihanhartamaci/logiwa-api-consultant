@@ -197,6 +197,10 @@ function App() {
             );
           }
           if (toolName === 'fallbackProvider') {
+            if (args.provider === 'localDesk') {
+              setToolStatus('Gemini and Pollinations unavailable — opening the local documentation desk...');
+              return;
+            }
             const modelLabel = args.model ? ` (${args.model})` : '';
             setToolStatus(`Gemini unavailable — switching to free Pollinations fallback${modelLabel}...`);
           }
@@ -341,6 +345,13 @@ function App() {
             <div className={`status-pill ${pollinationsReady ? 'on amber' : ''}`}>
               <span className="status-dot" />
               Pollinations {pollinationsReady ? 'ready' : 'fallback'}
+            </div>
+            <div
+              className="status-pill on"
+              title="If Gemini and Pollinations both fail, answers are assembled from the local Logiwa index"
+            >
+              <span className="status-dot" />
+              Docs desk standby
             </div>
           </div>
 
