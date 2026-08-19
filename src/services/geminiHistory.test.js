@@ -3,6 +3,9 @@ import {
   buildConversationContext,
   buildConversationSearchQuery,
   buildGeminiChatContents,
+  explainGeminiKeyError,
+  looksLikeGeminiApiKey,
+  normalizeGeminiApiKey,
 } from './gemini';
 
 describe('gemini chat history sanitization', () => {
@@ -114,5 +117,22 @@ describe('gemini chat history sanitization', () => {
     if (history.length) {
       expect(history[history.length - 1].role).toBe('model');
     }
+  });
+});
+
+describe('Gemini API key helpers', () => {
+  it('accepts quoted, spaced, and labeled Gemini keys', () => {
+    const raw = '  "API_KEY=AIzaSyDummyKeyValueForTests12345"  ';
+    expect(normalizeGeminiApiKey(raw)).toBe('AIzaSyDummyKeyValueForTests12345');
+    expect(looksLikeGeminiApiKey(raw)).toBe(true);
+    expect(looksLikeGeminiApiKey('not-a-key')).toBe(false);
+  });
+
+  it('explains HTTP referrer blocks with the GitHub Pages origin', () => {
+    const message = explainGeminiKeyError({
+      message: '403 Requests from referer <empty> are blocked. API_KEY_HTTP_REFERRER_BLOCKED',
+    });
+    expect(message).toContain('https://cihanhartamaci.github.io/*');
+    expect(message).toContain('localhost:5173');
   });
 });

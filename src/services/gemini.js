@@ -41,8 +41,38 @@ function buildPollinationsSystemInstruction() {
   return appendLearnedKnowledge(POLLINATIONS_FALLBACK_SYSTEM_PROMPT);
 }
 
+export const GEMINI_SITE_REFERRER = 'https://cihanhartamaci.github.io/*';
+export const GEMINI_LOCAL_REFERRER = 'http://localhost:5173/*';
+
+export function normalizeGeminiApiKey(value) {
+  return String(value || '')
+    .replace(/^\uFEFF/, '')
+    .trim()
+    .replace(/^["']+|["']+$/g, '')
+    .replace(/^(?:bearer|api[_-]?key)\s*[:=]\s*/i, '')
+    .replace(/[\s\u200b-\u200d\ufeff]/g, '');
+}
+
 export function looksLikeGeminiApiKey(value) {
-  return /^AIza[0-9A-Za-z_-]{20,}$/.test(String(value || '').trim());
+  return /^AIza[0-9A-Za-z_-]{20,}$/.test(normalizeGeminiApiKey(value));
+}
+
+export function explainGeminiKeyError(error) {
+  const message = String(error?.message || error || '');
+  if (
+    /API_KEY_HTTP_REFERRER_BLOCKED|referer <empty>|Requests from referer|httpReferrer/i.test(
+      message
+    )
+  ) {
+    return `Gemini blocked this API key (HTTP referrer). In Google AI Studio / Cloud Console, set Website restrictions to ${GEMINI_SITE_REFERRER} and ${GEMINI_LOCAL_REFERRER}. Google now also blocks keys with no application restriction.`;
+  }
+  if (/unrestricted/i.test(message) && /403|blocked|PERMISSION_DENIED/i.test(message)) {
+    return `Gemini blocked an unrestricted API key. Add a website restriction for ${GEMINI_SITE_REFERRER} and limit the key to the Generative Language API.`;
+  }
+  if (/API_KEY_INVALID|API key not valid|API_KEY_SERVICE_BLOCKED/i.test(message)) {
+    return `Gemini rejected this API key. Create a Generative Language key at https://aistudio.google.com/apikey, restrict it to this site (${GEMINI_SITE_REFERRER}), then paste it here.`;
+  }
+  return message;
 }
 
 export function isRateLimitError(error) {
@@ -454,7 +484,8 @@ export async function generateConsultantResponse(
     pollinationsApiKey = '',
   } = options;
 
-  const geminiReady = looksLikeGeminiApiKey(apiKey);
+  const geminiKey = normalizeGeminiApiKey(apiKey);
+  const geminiReady = looksLikeGeminiApiKey(geminiKey);
   const pollinationsReady =
     enablePollinationsFallback && Boolean(String(pollinationsApiKey || '').trim());
 
@@ -509,7 +540,7 @@ export async function generateConsultantResponse(
 
   try {
     return await generateWithGemini({
-      apiKey,
+      apiKey: geminiKey,
       systemInstruction: buildSystemInstruction(),
       chatHistory,
       groundedPrompt,
@@ -520,10 +551,7 @@ export async function generateConsultantResponse(
     console.warn('Gemini failed; evaluating fallback...', geminiError);
 
     if (!enablePollinationsFallback) {
-      throw new Error(
-        geminiError.message || 'Failed to communicate with the AI consultant.',
-        { cause: geminiError }
-      );
+      throw new Error(explainGeminiKeyError(geminiError), { cause: geminiError });
     }
 
     try {
@@ -531,7 +559,7 @@ export async function generateConsultantResponse(
     } catch (fallbackError) {
       console.error('Pollinations fallback failed:', fallbackError);
       throw new Error(
-        `Gemini failed (${geminiError.message || 'unknown'}). Pollinations fallback also failed: ${fallbackError.message}`,
+        `Gemini failed (${explainGeminiKeyError(geminiError)}). Pollinations fallback also failed: ${fallbackError.message}`,
         { cause: fallbackError }
       );
     }

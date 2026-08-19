@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut } from 'lucide-react';
-import { generateConsultantResponse, looksLikeGeminiApiKey } from './services/gemini';
+import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
@@ -35,7 +35,28 @@ const HISTORY_KEY = 'logiwa_chat_history';
 const TTL_HOURS = 24;
 
 function App() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem(HISTORY_KEY);
+    if (!saved) return [];
+    try {
+      const { timestamp, data } = JSON.parse(saved);
+      const hoursPassed = (Date.now() - timestamp) / (1000 * 60 * 60);
+      if (hoursPassed > TTL_HOURS) {
+        localStorage.removeItem(HISTORY_KEY);
+        return [];
+      }
+      return Array.isArray(data)
+        ? data.map((msg) => {
+            const rest = { ...msg };
+            delete rest.animate;
+            return rest;
+          })
+        : [];
+    } catch (e) {
+      console.error('Failed to load history', e);
+      return [];
+    }
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [toolStatus, setToolStatus] = useState(''); // e.g. "Searching Help Center..."
@@ -46,9 +67,6 @@ function App() {
   const [enablePollinationsFallback, setEnablePollinationsFallback] = useState(
     () => localStorage.getItem('logiwa_pollinations_fallback') !== 'false'
   );
-  const [isKeyValid, setIsKeyValid] = useState(
-    () => looksLikeGeminiApiKey(localStorage.getItem('logiwa_api_key'))
-  );
   const [isAuthenticated, setIsAuthenticated] = useState(
     () => localStorage.getItem(AUTH_STORAGE_KEY) === '1'
   );
@@ -57,33 +75,10 @@ function App() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const messagesRef = useRef(messages);
-  messagesRef.current = messages;
 
-  // Load chat history on mount
   useEffect(() => {
-    const saved = localStorage.getItem(HISTORY_KEY);
-    if (saved) {
-      try {
-        const { timestamp, data } = JSON.parse(saved);
-        const hoursPassed = (Date.now() - timestamp) / (1000 * 60 * 60);
-        if (hoursPassed > TTL_HOURS) {
-          localStorage.removeItem(HISTORY_KEY);
-        } else {
-          setMessages(
-            Array.isArray(data)
-              ? data.map((msg) => {
-                  const rest = { ...msg };
-                  delete rest.animate;
-                  return rest;
-                })
-              : data
-          );
-        }
-      } catch (e) {
-        console.error("Failed to load history", e);
-      }
-    }
-  }, []);
+    messagesRef.current = messages;
+  }, [messages]);
 
   // Save chat history on change
   useEffect(() => {
@@ -123,16 +118,21 @@ function App() {
   }, [messages, isLoading, toolStatus]);
 
   const pollinationsReady = enablePollinationsFallback && Boolean(pollinationsKey.trim());
-  const canAsk = isKeyValid || pollinationsReady;
+  const geminiReady = looksLikeGeminiApiKey(apiKey);
+  const canAsk = geminiReady || pollinationsReady;
+
+  const handleGeminiKeyChange = (value) => {
+    setApiKey(value);
+  };
 
   const validateApiKey = () => {
-    if (!apiKey) return;
-    if (!looksLikeGeminiApiKey(apiKey)) {
-      alert("Invalid Gemini API key format. Keys start with AIza and are at least 24 characters.");
-      setIsKeyValid(false);
-      return;
+    const normalized = normalizeGeminiApiKey(apiKey);
+    setApiKey(normalized);
+    if (!looksLikeGeminiApiKey(normalized)) {
+      alert(
+        'That does not look like a Gemini API key. Paste a key from https://aistudio.google.com/apikey (it starts with AIza). Restrict the key to https://cihanhartamaci.github.io/* — Google now blocks unrestricted keys.'
+      );
     }
-    setIsKeyValid(true);
   };
 
   const handleInputChange = (e) => {
@@ -183,7 +183,7 @@ function App() {
       let currentProposedKnowledge = null;
 
       const responseText = await generateConsultantResponse(
-        apiKey, 
+        normalizeGeminiApiKey(apiKey), 
         historyForModel,
         (toolName, args) => {
           if (toolName === 'searchDocumentation') setToolStatus(`Searching all Logiwa documentation for "${args.query}"...`);
@@ -225,12 +225,10 @@ function App() {
       ]);
     } catch (error) {
       console.error(error);
-      if (error.message.includes("API key not valid") || error.message.includes("403")) {
-         setIsKeyValid(false);
-      }
+      const details = explainGeminiKeyError(error);
       setMessages((prev) => [
         ...prev,
-        { role: 'model', content: `**Error:** I encountered an issue. Details: ${error.message}` }
+        { role: 'model', content: `**Error:** I encountered an issue. Details: ${details}` }
       ]);
     } finally {
       setIsLoading(false);
@@ -338,9 +336,9 @@ function App() {
           </div>
 
           <div className="status-list">
-            <div className={`status-pill ${isKeyValid ? 'on' : ''}`}>
+            <div className={`status-pill ${geminiReady ? 'on' : ''}`}>
               <span className="status-dot" />
-              Gemini {isKeyValid ? 'connected' : 'optional'}
+              Gemini {geminiReady ? 'connected' : 'optional'}
             </div>
             <div className={`status-pill ${pollinationsReady ? 'on amber' : ''}`}>
               <span className="status-dot" />
@@ -385,12 +383,12 @@ function App() {
       <main className="main-content">
         <div className="top-bar">
           {(messages.length > 0 || canAsk) && (
-            isKeyValid ? (
+            geminiReady ? (
               <div className="api-key-container connected-badge">
                 <CheckCircle size={16} color="#4ADE80" />
                 <span style={{ color: '#4ADE80', fontSize: '0.85rem', fontWeight: '500' }}>Gemini connected</span>
                 <button 
-                   onClick={() => { setIsKeyValid(false); setApiKey(''); }}
+                   onClick={() => { setApiKey(''); }}
                    className="disconnect-btn"
                    title="Disconnect Gemini API Key"
                 >
@@ -405,7 +403,7 @@ function App() {
                   className="api-key-input" 
                   placeholder="Gemini API Key" 
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={(e) => handleGeminiKeyChange(e.target.value)}
                   autoComplete="new-password"
                 />
                 <button onClick={validateApiKey} className="connect-btn" disabled={!apiKey || isLoading}>
@@ -434,7 +432,7 @@ function App() {
                 title="Free key from https://enter.pollinations.ai — required because Pollinations no longer allows anonymous text calls"
               />
             )}
-            {pollinationsReady && !isKeyValid && (
+            {pollinationsReady && !geminiReady && (
               <span className="connected-badge pollinations fallback-ready-hint">
                 <CheckCircle size={14} color="#4bb7e0" />
                 Ready
@@ -472,7 +470,12 @@ function App() {
                   <div className="setup-card">
                     <div className="setup-card-kicker">Recommended</div>
                     <h2 className="setup-card-title">Gemini</h2>
-                    <p className="setup-card-copy">Best quality answers with source citations.</p>
+                    <p className="setup-card-copy">
+                      Paste your own key from aistudio.google.com/apikey. Restrict it to this site:
+                      {' '}
+                      <code>https://cihanhartamaci.github.io/*</code>
+                      . Google now blocks unrestricted keys.
+                    </p>
                     <div className="setup-card-row">
                       <Key size={16} color="var(--text-secondary)" />
                       <input
@@ -480,7 +483,7 @@ function App() {
                         className="setup-card-input"
                         placeholder="Paste Gemini API key"
                         value={apiKey}
-                        onChange={(e) => setApiKey(e.target.value)}
+                        onChange={(e) => handleGeminiKeyChange(e.target.value)}
                         autoComplete="new-password"
                       />
                       <button onClick={validateApiKey} className="connect-btn" disabled={!apiKey || isLoading}>
