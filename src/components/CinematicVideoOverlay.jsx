@@ -1,33 +1,23 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
-export const LOGIN_CINEMATIC_VIDEO_ID = 'Uo0vHUbRsDE';
+export const LOGIN_CINEMATIC_VIDEO_ID = 'yVhbKYfPRck';
 export const LOGOUT_CINEMATIC_VIDEO_ID = '_ZnOfdpOEZQ';
 
-function loadYouTubeApi() {
-  if (window.YT?.Player) return Promise.resolve(window.YT);
-  if (window.__ytApiPromise) return window.__ytApiPromise;
-
-  window.__ytApiPromise = new Promise((resolve) => {
-    const previous = window.onYouTubeIFrameAPIReady;
-    window.onYouTubeIFrameAPIReady = () => {
-      previous?.();
-      resolve(window.YT);
-    };
-    if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
-      const script = document.createElement('script');
-      script.src = 'https://www.youtube.com/iframe_api';
-      script.async = true;
-      document.body.appendChild(script);
-    }
+function youtubeEmbedSrc(videoId) {
+  const params = new URLSearchParams({
+    autoplay: '1',
+    mute: '1',
+    rel: '0',
+    modestbranding: '1',
+    playsinline: '1',
+    enablejsapi: '1',
   });
-
-  return window.__ytApiPromise;
+  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
 }
 
 export default function CinematicVideoOverlay({ videoId, mode = 'login', onFinished }) {
-  const hostRef = useRef(null);
-  const playerRef = useRef(null);
+  const iframeRef = useRef(null);
   const finishedRef = useRef(false);
   const onFinishedRef = useRef(onFinished);
 
@@ -43,48 +33,28 @@ export default function CinematicVideoOverlay({ videoId, mode = 'login', onFinis
 
   useEffect(() => {
     finishedRef.current = false;
-    let cancelled = false;
     const fallbackMs = mode === 'logout' ? 40000 : 75000;
     const fallback = window.setTimeout(finish, fallbackMs);
 
-    loadYouTubeApi().then((YT) => {
-      if (cancelled || !hostRef.current) return;
-      playerRef.current = new YT.Player(hostRef.current, {
-        videoId,
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: 1,
-          rel: 0,
-          modestbranding: 1,
-          playsinline: 1,
-          origin: window.location.origin,
-        },
-        events: {
-          onReady: (event) => {
-            try {
-              event.target.unMute();
-              event.target.playVideo();
-            } catch {
-              // Autoplay with sound can still be blocked; the iframe remains visible.
-            }
-          },
-          onStateChange: (event) => {
-            if (event.data === YT.PlayerState.ENDED) finish();
-          },
-        },
-      });
-    });
-
-    return () => {
-      cancelled = true;
-      window.clearTimeout(fallback);
-      try {
-        playerRef.current?.destroy();
-      } catch {
-        // Player may already be gone.
+    const onMessage = (event) => {
+      if (!String(event.origin || '').includes('youtube.com')) return;
+      let data = event.data;
+      if (typeof data === 'string') {
+        try {
+          data = JSON.parse(data);
+        } catch {
+          return;
+        }
       }
-      playerRef.current = null;
+      if (data?.event === 'onStateChange' && data?.info === 0) {
+        finish();
+      }
+    };
+
+    window.addEventListener('message', onMessage);
+    return () => {
+      window.clearTimeout(fallback);
+      window.removeEventListener('message', onMessage);
     };
   }, [videoId, mode]);
 
@@ -97,7 +67,15 @@ export default function CinematicVideoOverlay({ videoId, mode = 'login', onFinis
       <p className="cinematic-kicker">{isLogout ? 'Signing off' : 'Autobots, roll out'}</p>
       <div className="cinematic-stage">
         <div className="cinematic-frame">
-          <div ref={hostRef} className="cinematic-player" />
+          <iframe
+            ref={iframeRef}
+            className="cinematic-player"
+            src={youtubeEmbedSrc(videoId)}
+            title={isLogout ? 'Logout cinematic' : 'Login cinematic'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
         </div>
       </div>
       <p className="cinematic-caption">
