@@ -4,7 +4,7 @@ const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 /** Short prompt for fallback models — never send the full Gemini system instruction. */
 export const POLLINATIONS_FALLBACK_SYSTEM_PROMPT = `You are AIntegration, a Logiwa WMS API expert.
 This is an ongoing chat. Continue the same topic; resolve follow-ups from earlier turns.
-Answer from the retrieved Help Center, Magna-Tiles knowledge docs, and Swagger sources plus the conversation so far.
+Answer from the retrieved Help Center, API support guides, and Swagger sources plus the conversation so far.
 Blend the operational workflow with implementation guides and the API contract: method, path, request fields, and response fields.
 Cite [HC-...], [KB-...], and [API-...] source IDs. Do not invent endpoints, fields, or webhook names.
 If sources and prior turns are insufficient, say so. Be concise.`;
@@ -218,7 +218,7 @@ export function prepareGeminiSources(sources) {
     query: sources?.query,
     coverage: sources?.coverage,
     blend:
-      'Use Help Center for Logiwa IO workflow, Magna-Tiles knowledge docs [KB-...] for implementation guides and example payloads, and Swagger paths/components.schemas for exact request and response fields. Cite [HC-...], [KB-...], and [API-...] IDs.',
+      'Use Help Center for Logiwa IO workflow, API support guides [KB-...] for implementation notes and example payloads, and Swagger paths/components.schemas for exact request and response fields. Cite [HC-...], [KB-...], and [API-...] IDs.',
     helpCenter,
     knowledge,
     swagger: {

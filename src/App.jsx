@@ -356,7 +356,7 @@ function App() {
           </div>
 
           <p className="sidebar-guide">
-            Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and Magna-Tiles API support guides. Keys stay in this browser.
+            Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and API support guides. Keys stay in this browser.
           </p>
           
           {messages.length > 0 && (
@@ -471,7 +471,7 @@ function App() {
               </div>
               <h1 className="welcome-title text-gradient">AIntegration</h1>
               <p className="welcome-text">
-                I search the Logiwa spec, Help Center, and Magna-Tiles API support guides before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
+                I search the Logiwa spec, Help Center, and API support guides before answering. Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
 
               {!canAsk && (

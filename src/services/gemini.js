@@ -254,7 +254,7 @@ function buildGroundedPrompt(userMessage, sources, { allowToolRefinement = true,
     : compactDocumentationSources(sources);
   const safeSources = JSON.stringify(payload).replace(/"\$ref"/g, '"_ref"');
   const toolHint = allowToolRefinement
-    ? 'If these sources are insufficient, call searchDocumentation with a refined query before answering. Blend Help Center, Magna-Tiles knowledge docs, and Swagger request/response schemas.'
+    ? 'If these sources are insufficient, call searchDocumentation with a refined query before answering. Blend Help Center, API support guides, and Swagger request/response schemas.'
     : 'Answer only from these sources. Do not invent API fields. List request and response fields from the attached schemas.';
   const conversationBlock = conversationContext
     ? `
