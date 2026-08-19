@@ -129,9 +129,7 @@ function App() {
     const normalized = normalizeGeminiApiKey(apiKey);
     setApiKey(normalized);
     if (!looksLikeGeminiApiKey(normalized)) {
-      alert(
-        'That does not look like a Gemini API key. Paste a key from https://aistudio.google.com/apikey (it starts with AIza). Restrict the key to https://cihanhartamaci.github.io/* — Google now blocks unrestricted keys.'
-      );
+      alert('Paste a Gemini API key from https://aistudio.google.com/apikey.');
     }
   };
 

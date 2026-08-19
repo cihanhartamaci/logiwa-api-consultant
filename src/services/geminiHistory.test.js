@@ -121,11 +121,14 @@ describe('gemini chat history sanitization', () => {
 });
 
 describe('Gemini API key helpers', () => {
-  it('accepts quoted, spaced, and labeled Gemini keys', () => {
+  it('treats any non-empty pasted value as a key and does not require a prefix', () => {
     const raw = '  "API_KEY=AIzaSyDummyKeyValueForTests12345"  ';
     expect(normalizeGeminiApiKey(raw)).toBe('AIzaSyDummyKeyValueForTests12345');
     expect(looksLikeGeminiApiKey(raw)).toBe(true);
-    expect(looksLikeGeminiApiKey('not-a-key')).toBe(false);
+    expect(looksLikeGeminiApiKey('AQ.AbCjDeFgHiJkLmNoPqRsTuVwXyZ012345')).toBe(true);
+    expect(looksLikeGeminiApiKey('any-project-secret-token')).toBe(true);
+    expect(looksLikeGeminiApiKey('   ')).toBe(false);
+    expect(looksLikeGeminiApiKey('')).toBe(false);
   });
 
   it('explains HTTP referrer blocks with the GitHub Pages origin', () => {

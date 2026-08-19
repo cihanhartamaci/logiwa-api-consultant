@@ -54,7 +54,7 @@ export function normalizeGeminiApiKey(value) {
 }
 
 export function looksLikeGeminiApiKey(value) {
-  return /^AIza[0-9A-Za-z_-]{20,}$/.test(normalizeGeminiApiKey(value));
+  return normalizeGeminiApiKey(value).length > 0;
 }
 
 export function explainGeminiKeyError(error) {
