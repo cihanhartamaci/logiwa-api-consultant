@@ -90,4 +90,25 @@ describe('documentation index', () => {
     const carrier = getRelevantKnowledge('carrier shipping option', 5);
     expect(carrier.some((article) => /carrier/i.test(article.title))).toBe(true);
   });
+
+  it('indexes Logiwa Webhook v2.0 platform docs from webhook.logiwa.com', () => {
+    const stats = getDocumentationIndexStats();
+    expect(stats.knowledgeDocuments).toBeGreaterThanOrEqual(24);
+
+    const platform = getRelevantKnowledge('Logiwa Webhook v2.0 webhook.logiwa.com create subscription JWT', 6);
+    expect(platform.some((article) => /Webhook v2\.0/i.test(article.title))).toBe(true);
+    expect(platform.some((article) => /webhook\.logiwa\.com/i.test(article.content))).toBe(true);
+
+    const events = getRelevantKnowledge('ShipmentOrderCreated InventoryMovementRecorded supported events catalog', 5);
+    expect(
+      events.some(
+        (article) =>
+          /Supported Events/i.test(article.title) ||
+          /ShipmentOrderCreated/i.test(article.content)
+      )
+    ).toBe(true);
+
+    const delivery = getRelevantKnowledge('webhook HMAC retry timeout IP whitelist 10 seconds', 5);
+    expect(delivery.some((article) => /Delivery|Security|Retries|Operations/i.test(article.title))).toBe(true);
+  });
 });

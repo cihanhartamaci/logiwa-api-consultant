@@ -27,7 +27,8 @@ const synonymGroups = [
   ["update", "edit", "put", "patch", "guncelle"],
   ["delete", "remove", "cancel", "sil", "iptal"],
   ["lql", "query", "filter", "filtre"],
-  ["webhook", "subscription", "callback"],
+  ["webhook", "subscription", "callback", "webhook.logiwa", "hmac"],
+  ["shipmentorder", "shipment", "order"],
 ];
 
 const synonymMap = new Map();
