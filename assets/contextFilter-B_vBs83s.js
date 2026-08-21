@@ -1,4 +1,4 @@
-import{s as g}from"./swagger-data-CD9pdyUO.js";import{h as L}from"./help-center-data-CYub9J39.js";const U=[{title:"Create & Update Products",origin:"Magna-Tiles / API_Support_Doc.zip",filename:"Create & Update Products.pdf",url:"kb://magna-tiles/API_Support_Doc/Create & Update Products.pdf",content:`--- Page 1 ---
+import{s as g}from"./swagger-data-CD9pdyUO.js";import{h as D}from"./help-center-data-CYub9J39.js";const C=[{title:"Create & Update Products",origin:"Magna-Tiles / API_Support_Doc.zip",filename:"Create & Update Products.pdf",url:"kb://magna-tiles/API_Support_Doc/Create & Update Products.pdf",content:`--- Page 1 ---
  
  
  Logiwa 
@@ -3097,7 +3097,184 @@ Example Response:
  
  
  
-In the results returned, it will be sufficient to sum up the freeUOMQuantity for all indexes. If you do not want to include damaged items in this amount, you can add a "null" check to the damageReasonName field. This will fulfill your request for the non-damaged quantity`}],Q=new Set(["how","do","i","what","is","the","a","to","in","for","of","and","or","with","can","you","tell","me","about","my","an","on","nasıl","yaparım","nedir","bana","hakkında","için","ile","ve","veya","bir","this","that","from","are","was","were","be","been","being","it","its","as","at","by","we","our","your"]),G=[["shipment","shipping","ship","outbound","sevkiyat"],["purchase","receiving","receive","inbound","kabul"],["inventory","stock","envanter","stok"],["product","sku","item","urun"],["location","bin","lokasyon","adres"],["license","plate","pallet","palet"],["cycle","count","counting","sayim"],["replenishment","replenish","ikmal"],["allocation","allocate","tahsis"],["warehouse","depo"],["carrier","shippingprovider","kargo"],["return","rma","iade"],["list","search","get","report","liste"],["create","add","post","olustur"],["update","edit","put","patch","guncelle"],["delete","remove","cancel","sil","iptal"],["lql","query","filter","filtre"],["webhook","subscription","callback"]],x=new Map;G.forEach(n=>{n.forEach(t=>x.set(t,n))});function P(n=""){return String(n).replace(/([a-z0-9])([A-Z])/g,"$1 $2").toLocaleLowerCase("en-US").replace(/[ıİ]/g,"i").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[şŞ]/g,"s").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").normalize("NFKD").replace(/[\u0300-\u036f]/g," ")}function M(n){return P(n).replace(/[^a-z0-9\s/_-]/g," ").replace(/[/_-]/g," ").split(/\s+/).filter(t=>t.length>2&&!Q.has(t))}function F(n,t=!0){const e=M(n);if(!t)return[...new Set(e)];const i=new Set(e);return e.forEach(a=>{var s;const r=x.get(a)||((s=[...x.entries()].find(([l])=>l.length>=4&&a.startsWith(l)))==null?void 0:s[1]);r&&r.forEach(l=>i.add(l))}),[...i]}function B(n,t=260,e=40){const i=String(n||"").split(/\s+/).filter(Boolean);if(i.length<=t)return[i.join(" ")];const a=[],r=t-e;for(let s=0;s<i.length&&(a.push(i.slice(s,s+t).join(" ")),!(s+t>=i.length));s+=r);return a}function v(n){return String(n||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}function f(n,t=0){if(!n||typeof n!="object")return{type:"object"};if(n.$ref)return{$ref:n.$ref};if(t>4)return{type:n.type||"object",format:n.format};const e={};return n.type&&(e.type=n.type),n.format&&(e.format=n.format),n.required&&(e.required=n.required),n.enum&&(e.enum=n.enum),n.nullable&&(e.nullable=n.nullable),n.minLength!=null&&(e.minLength=n.minLength),n.maxLength!=null&&(e.maxLength=n.maxLength),n.minimum!=null&&(e.minimum=n.minimum),n.maximum!=null&&(e.maximum=n.maximum),n.description&&(e.description=String(n.description).slice(0,220)),n.properties&&(e.properties={},Object.entries(n.properties).forEach(([i,a])=>{e.properties[i]=f(a,t+1)})),n.items&&(e.items=f(n.items,t+1)),n.allOf&&(e.allOf=n.allOf.map(i=>f(i,t+1))),n.oneOf&&(e.oneOf=n.oneOf.map(i=>f(i,t+1))),n.anyOf&&(e.anyOf=n.anyOf.map(i=>f(i,t+1))),e}function O(n,t=[]){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.push(e[1])}return Object.values(n).forEach(e=>O(e,t)),t}function H(n){if(!n)return;const t=n.content||{},e=t["application/json"]||t["application/json-patch+json"]||Object.values(t)[0],i=e==null?void 0:e.schema;return{required:n.required,schema:i?f(i):void 0}}function z(n){var e,i,a;const t=(n==null?void 0:n.content)||{};return((e=t["application/json"])==null?void 0:e.schema)||((i=t["application/json-patch+json"])==null?void 0:i.schema)||((a=Object.values(t)[0])==null?void 0:a.schema)}function K(n){if(!n)return;const t={};return Object.entries(n).forEach(([e,i])=>{if(!(/^2/.test(e)||e==="400"))return;const r=z(i);t[e]={description:v(i.description||"").slice(0,160),schema:r?f(r):void 0}}),Object.keys(t).length?t:void 0}function $(n){const t=v(n.description||"").slice(0,800),e=(n.parameters||[]).slice(0,16).map(i=>({name:i.name,in:i.in,required:i.required,description:i.description?v(i.description).slice(0,180):void 0,schema:i.schema?{type:i.schema.type,format:i.schema.format,enum:i.schema.enum}:void 0}));return{tags:n.tags,summary:n.summary,description:t||void 0,parameters:e.length?e:void 0,requestBody:H(n.requestBody),responses:K(n.responses)}}function k(n,t=0,e=[],i=new Set){var a,r,s;if(!n||typeof n!="object"||t>5)return e;if(Array.isArray(n))return n.forEach(l=>k(l,t+1,e,i)),e;if(typeof n.$ref=="string"){const l=(a=n.$ref.match(/^#\/components\/schemas\/(.+)$/))==null?void 0:a[1];if(l&&!i.has(l)){i.add(l),e.push(l);const d=(s=(r=g.components)==null?void 0:r.schemas)==null?void 0:s[l];d&&k(d,t+1,e,i)}}return n.properties&&typeof n.properties=="object"&&Object.keys(n.properties).forEach(l=>e.push(l)),Object.values(n).forEach(l=>{l&&typeof l=="object"&&k(l,t+1,e,i)}),e}function J(n,t,e){const i=(e.parameters||[]).map(s=>s.name).join(" "),a=O(e.requestBody||{});O(e.responses||{},a);const r=k(e.requestBody);return k(e.responses,0,r),[t.toUpperCase(),n,e.summary||"",(e.tags||[]).join(" "),v(e.description||"").slice(0,800),i,[...new Set(a)].join(" "),[...new Set(r)].join(" ")].join(" ")}function C(n){const t=new Map;let e=0;const i=n.map(a=>{const r=M(a.searchText),s=new Map;return r.forEach(l=>s.set(l,(s.get(l)||0)+1)),s.forEach((l,d)=>{t.set(d,(t.get(d)||0)+1)}),e+=r.length,{...a,tokens:r,frequencies:s,normalizedText:P(a.searchText)}});return{documents:i,documentFrequency:t,averageLength:e/Math.max(i.length,1)}}function N(n,t,e,i=null){const a=F(t),r=F(t,!1);if(a.length===0)return[];const s=P(t).trim(),l=n.documents.length,d=1.5,y=.72,m=n.documents.map(o=>{let u=0;a.forEach(h=>{const I=o.frequencies.get(h)||0;if(I===0)return;const T=n.documentFrequency.get(h)||0,W=Math.log(1+(l-T+.5)/(T+.5)),j=I+d*(1-y+y*o.tokens.length/Math.max(n.averageLength,1));u+=W*(I*(d+1)/j)});const p=P(o.title||"");return r.forEach(h=>{p.includes(h)&&(u+=3.5),o.normalizedText.includes(h)&&(u+=.25)}),s.length>4&&o.normalizedText.includes(s)&&(u+=8),{...o,score:u}}).filter(o=>o.score>0).sort((o,u)=>u.score-o.score);if(!i)return m.slice(0,e);const c=[],b=new Map;for(const o of m){const u=o[i],p=b.get(u)||0;if(!(p>=2)&&(c.push(o),b.set(u,p+1),c.length>=e))break}return c}const A=L.flatMap((n,t)=>B(n.content).map((e,i)=>({id:`help-${t}-${i}`,articleId:`help-${t}`,title:n.title,url:n.url,content:e,chunkIndex:i,searchText:`${n.title} ${e}`}))),w=[];Object.entries(g.paths||{}).forEach(([n,t])=>{Object.entries(t).forEach(([e,i])=>{if(!i||typeof i!="object")return;const a=`${e.toUpperCase()} ${n} ${i.summary||""}`;w.push({id:`swagger-${w.length}`,path:n,method:e.toLowerCase(),operation:$(i),title:a,searchText:J(n,e,i)})})});const _=U.flatMap((n,t)=>B(n.content).map((e,i)=>({id:`kb-${t}-${i}`,articleId:`kb-${t}`,title:n.title,url:n.url,origin:n.origin,content:e,chunkIndex:i,searchText:`${n.title} ${n.origin||""} ${n.filename||""} ${e}`}))),V=C(A),Z=C(w),Y=C(_);function q(n,t=6){return N(V,n,t,"articleId").map(e=>({sourceId:`HC-${e.articleId.replace("help-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function D(n,t=new Set){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.add(e[1])}return Object.values(n).forEach(e=>D(e,t)),t}function E(n,t=4){return N(Y,n,t,"articleId").map(e=>({sourceId:`KB-${e.articleId.replace("kb-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,origin:e.origin,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function R(n,t=6){var y,m,c,b;const e=N(Z,n,t),i={openapi:g.openapi,info:{title:(y=g.info)==null?void 0:y.title,version:(m=g.info)==null?void 0:m.version},paths:{},components:{schemas:{}}},a=e.map(o=>(i.paths[o.path]||(i.paths[o.path]={}),i.paths[o.path][o.method]=o.operation,{sourceId:`API-${o.id.replace("swagger-","")}`,method:o.method.toUpperCase(),path:o.path,summary:o.operation.summary||"",score:Number(o.score.toFixed(3))})),r=[...D(i.paths)].map(o=>({name:o,hop:0})),s=new Set,l=36,d=3;for(;r.length>0&&Object.keys(i.components.schemas).length<l;){const{name:o,hop:u}=r.shift();if(s.has(o))continue;s.add(o);const p=(b=(c=g.components)==null?void 0:c.schemas)==null?void 0:b[o];p&&(i.components.schemas[o]=f(p),!(u+1>=d)&&D(p).forEach(h=>{s.has(h)||r.push({name:h,hop:u+1})}))}return{document:i,sources:a}}function S(n,t,e){const i=new Set,a=[];for(const r of[...n,...t]){const s=r.sourceId;if(!(!s||i.has(s))&&(i.add(s),a.push(r),a.length>=e))break}return a}function en(n,{helpLimit:t=6,swaggerLimit:e=6,knowledgeLimit:i=4}={}){var m;const a=q(n,t),r=R(n,e),s=E(n,i),l=[n,...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`),...s.map(c=>c.title)].join(`
-`),d=[n,...a.map(c=>c.title),...s.map(c=>c.title)].join(`
-`),y=[n,...a.map(c=>c.title),...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`)].join(`
-`);return{query:n,coverage:{indexedHelpCenterArticles:L.length,indexedHelpCenterChunks:A.length,indexedSwaggerOperations:w.length,indexedSwaggerSchemas:Object.keys(((m=g.components)==null?void 0:m.schemas)||{}).length,indexedKnowledgeDocuments:U.length,indexedKnowledgeChunks:_.length},helpCenter:S(a,q(l,t),t),swagger:(()=>{var p,h,I;const c=R(d,e),b=S(r.sources,c.sources,e),o={},u={};for(const T of[r,c])Object.assign(o,((p=T.document)==null?void 0:p.paths)||{}),Object.assign(u,((I=(h=T.document)==null?void 0:h.components)==null?void 0:I.schemas)||{});return{sources:b,document:{openapi:r.document.openapi,info:r.document.info,paths:o,components:{schemas:u}}}})(),knowledge:S(s,E(y,i),i)}}function tn(){var n;return{helpCenterArticles:L.length,helpCenterChunks:A.length,swaggerOperations:w.length,swaggerSchemas:Object.keys(((n=g.components)==null?void 0:n.schemas)||{}).length,knowledgeDocuments:U.length,knowledgeChunks:_.length}}export{F as extractKeywords,tn as getDocumentationIndexStats,q as getRelevantArticles,E as getRelevantKnowledge,R as getRelevantSwagger,en as searchDocumentation};
+In the results returned, it will be sufficient to sum up the freeUOMQuantity for all indexes. If you do not want to include damaged items in this amount, you can add a "null" check to the damageReasonName field. This will fulfill your request for the non-damaged quantity`},{title:"Logiwa Webhook v2.0 Overview & Quick Start",origin:"Logiwa Webhook Platform / webhook.logiwa.com",filename:"webhook-v2-overview.md",url:"https://webhook.logiwa.com/",content:`Logiwa Webhook Platform v2.0 (official docs: https://webhook.logiwa.com/)
+
+This is the newer webhook platform referenced from Logiwa Open API as Webhooks V2.0. It is separate from the legacy Open API webhook endpoints on myapi.logiwa.com such as POST /v3.1/Webhook/create, GET /v3.1/Webhook/list, GET /v3.1/Helper/webhooktopics, and unsubscribe/status helpers.
+
+Purpose:
+Receive real-time event notifications from your Logiwa IO warehouse via HTTPS webhooks.
+
+Base URL:
+https://webhook.logiwa.com
+
+Get started in 4 steps:
+1. Authenticate — obtain a JWT with POST /v1/auth/login using your Logiwa IO API user Email and Password.
+2. Choose events — select events from the supported list, or call GET /v1/events programmatically.
+3. Create webhook — POST /v1/webhooks with your HTTPS endpoint URL, event ID, allowedClientIdentifiers, and active flag.
+4. Receive events — Logiwa sends HTTP POST notifications to your endpoint.
+
+Quick tips from the docs:
+- Discover available event types with GET /v1/events before subscribing.
+- Start with a single event type while testing.
+- Implement HMAC signature verification.
+- Use the X-Mylogiwa-Processing-Duration header to monitor latency.
+- Log deliveries and test in a non-production environment first.
+- Firewall notice: whitelist delivery IPs 18.116.226.248 and 3.151.75.183.
+- Create/update can take up to 5 minutes to become fully active because of distributed cache propagation.
+- Public webhook testing domains such as webhook.site are blocked.
+
+V1 topic mapping (for migration from legacy subscriptions):
+V2 event IDs map to older WMS topic strings. Example: ShipmentOrderCreated maps to wms/shipmentorder/create. Prefer V2 event IDs when integrating against webhook.logiwa.com.
+
+Open API note:
+Logiwa Open API Webhook tag points integrators to https://webhook.logiwa.com and describes V2.0 as offering better performance/security, zero-event-loss retries, and payload compatibility with V1.`},{title:"Logiwa Webhook v2.0 Authentication & Subscription API",origin:"Logiwa Webhook Platform / webhook.logiwa.com",filename:"webhook-v2-api.md",url:"https://webhook.logiwa.com/",content:`Logiwa Webhook Platform v2.0 API (https://webhook.logiwa.com/)
+
+Authentication
+POST https://webhook.logiwa.com/v1/auth/login
+Required body:
+- Email (string) — Logiwa IO API user email. Example: "user@company.com"
+- Password (string) — Logiwa IO API user password
+Success 200 response:
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_at": "2024-01-15T11:30:00Z"
+}
+Status codes: 200 OK; 400 missing/invalid credentials payload; 401 invalid credentials; 503 auth service unavailable.
+Use Authorization: Bearer <token> on subsequent webhook API calls. Tokens expire (check expires_at). Always include the Bearer prefix.
+
+Create webhook
+POST https://webhook.logiwa.com/v1/webhooks
+Required:
+- url (string, HTTPS, max 2048 chars) — destination for HTTP POST deliveries
+- event (string) — valid active event ID from GET /v1/events (example: "ShipmentOrderCreated")
+- allowedClientIdentifiers (array) — client GUIDs; use [] to receive events from all clients
+- active (boolean) — whether the webhook should receive events
+Optional:
+- name (string) — friendly name; auto-generated from event if omitted
+- description (string)
+- headers (object) — custom headers included on outbound webhook POSTs
+Notes:
+- Activation may take up to 5 minutes (cache propagation). See Q&A.
+- Client identifiers should be Identifier values from the Logiwa List Clients endpoint.
+Status codes: 201 created; 400 bad request; 401 unauthorized; 409 conflict (same event and URL already exists / may merge); 422 URL validation failed or event unsupported.
+
+Example:
+curl -X POST https://webhook.logiwa.com/v1/webhooks \\
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "url": "https://api.example.com/webhooks/shipments",
+    "event": "ShipmentOrderCreated",
+    "allowedClientIdentifiers": [],
+    "active": true,
+    "name": "Shipment Order Webhook",
+    "description": "Webhook for processing new shipment order notifications",
+    "headers": {
+      "Authorization": "Bearer webhook-token",
+      "X-Custom-Header": "logiwa-webhook"
+    }
+  }'
+
+List webhooks
+GET https://webhook.logiwa.com/v1/webhooks?limit=10&offset=0
+Optional query params: limit (1-100), offset
+Response: { "webhooks": [ ... ], "total_count": N }
+Sorted by creation date, newest first.
+
+Get webhook
+GET https://webhook.logiwa.com/v1/webhooks/{id}
+Returns one webhook configuration. Status: 200, 401, 404, 500.
+
+Update webhook
+PUT https://webhook.logiwa.com/v1/webhooks/{id}
+Partial updates supported. Optional body fields: name, url, description, headers, event, active.
+Update activation can also take up to 5 minutes due to cache sync.
+Status: 200, 400, 401, 404, 422.
+
+Delete webhook
+DELETE https://webhook.logiwa.com/v1/webhooks/{id}
+Returns 204 No Content on success. Permanently stops deliveries. Status: 204, 400, 401, 404.
+
+List events
+GET https://webhook.logiwa.com/v1/events
+Optional query: active=true|false
+Response: { "events": [{ "id", "name", "description", "version", "active", "created_at", "updated_at" }], "total_count": N }
+Use this endpoint as the source of truth for event IDs passed to POST /v1/webhooks.`},{title:"Logiwa Webhook v2.0 Supported Events Catalog",origin:"Logiwa Webhook Platform / webhook.logiwa.com",filename:"webhook-v2-events.md",url:"https://webhook.logiwa.com/",content:`Logiwa Webhook Platform v2.0 supported events (https://webhook.logiwa.com/)
+
+Authoritative live list: GET https://webhook.logiwa.com/v1/events
+
+Quick-start mapping of V2 event names to legacy V1 WMS topic names:
+
+| V2 Event Name | Description | Legacy V1 Event Name |
+| --- | --- | --- |
+| ShipmentStatusChanged | Triggered when shipment order status changes in WMS | wms/shipmentorder/statuschange |
+| ShipmentOrderCreated | Triggered when a new shipment order is created in WMS | wms/shipmentorder/create |
+| ShipmentDetailsUpdated | Triggered when shipment details are updated in WMS | wms/shipmentorder/update |
+| ShipmentDispatched | Triggered when a shipment is dispatched in WMS | wms/shipmentorder/shipment |
+| ProductCreated | Triggered when a new product is created in WMS | wms/product/create |
+| ProductInformationUpdated | Triggered when product information is updated in WMS | wms/product/update |
+| PurchaseOrderStatusChanged | Triggered when purchase order status changes in WMS | wms/purchaseorder/statuschange |
+| InventoryMovementRecorded | Triggered when inventory movement is recorded in WMS | wms/inventory/transaction |
+| ShipmentOrderMergeActions | Triggered when a shipment order is merged/unmerged in WMS | wms/shipmentorder/mergeorder |
+
+Example event IDs observed from GET /v1/events samples:
+ShipmentDispatched, ShipmentDetailsUpdated, ProductCreated, ShipmentStatusChanged, ShipmentOrderCreated, ProductInformationUpdated, InventoryMovementRecorded, ShipmentOrderMergeActions, PurchaseOrderStatusChanged.
+
+Migration guidance:
+- Legacy subscriptions created via POST /v3.1/Webhook/create used topic strings such as wms/inventory/transaction or openapi/shipmentorder/create.
+- On webhook.logiwa.com, subscribe with the matching V2 event ID (for inventory transactions: InventoryMovementRecorded; for shipment create: ShipmentOrderCreated).
+- Webhooks V2.0 is described as payload-compatible with V1, but validate fields against live deliveries.
+- Scope with allowedClientIdentifiers, or pass [] for all clients.
+- Multiple webhooks for the same event are allowed only when base URLs differ.`},{title:"Logiwa Webhook v2.0 Delivery, Security, Retries & Operations",origin:"Logiwa Webhook Platform / webhook.logiwa.com",filename:"webhook-v2-delivery-ops.md",url:"https://webhook.logiwa.com/",content:`Logiwa Webhook Platform v2.0 delivery, security, and operations (https://webhook.logiwa.com/)
+
+How delivery works:
+Webhooks are delivered as HTTP POST requests to your configured HTTPS URL. Each request includes security and context headers plus a JSON body.
+
+Documented delivery headers:
+- accept-encoding: gzip
+- content-type: application/json
+- user-agent: EventSender/1.0
+- x-mylogiwa-topic: {{TOPIC_NAME}}
+- x-mylogiwa-client-id: {{CLIENT_ID}}
+- x-mylogiwa-subscription-id: {{SUBSCRIPTION_ID}}
+- x-mylogiwa-processing-duration: {{PROCESSING_DURATION_MS}}
+- x-mylogiwa-hmac-sha256: {{HMAC_SIGNATURE}}
+- x-mylogiwa-event-id: {{EVENT_ID}}
+Q&A also references HMAC-SHA256 authenticity verification (X-HMAC-Signature / x-mylogiwa-hmac-sha256), X-Timestamp in Unix format, and optional Authorization custom token if you configured headers on the webhook.
+
+Example conceptual payload shape from docs:
+[
+  {
+    "Identifier": "{{PRODUCT_IDENTIFIER}}",
+    "SKU": "{{PRODUCT_SKU}}",
+    "ClientId": {{CLIENT_ID}}
+  }
+]
+
+Timeout:
+Endpoint must respond within 10 seconds. Responses after 10 seconds are treated as timeout failures and retried. Best practice: return HTTP 200 immediately and process asynchronously with a queue/background job.
+
+Retry logic:
+- 2xx (200-299): success, no retry
+- 4xx (400-499): permanent failure, no automatic retry; event marked failed; check endpoint configuration
+- 5xx (500-599): temporary failure; automatic retry with exponential backoff; marked failed if retries exhaust
+- 429 Too Many Requests: automatic retry after Retry-After; exponential backoff applied
+
+Operational FAQ highlights:
+- Cache delay: create/update is persisted immediately, but full activation can take up to 5 minutes while cache propagates to all processing nodes. Verify with GET /v1/webhooks/{id} or GET /v1/webhooks.
+- Multiple webhooks for one event: allowed if base URLs differ. Same event + same base URL (even with different path) returns HTTP 400 with message like "A webhook for this event and base URL already exists".
+- Client identifiers: specific GUID array filters to those clients; empty array [] broadcasts to all clients. Resolve GUIDs via Logiwa List Clients.
+- Processing-time tracking: every request includes X-Mylogiwa-Processing-Duration (milliseconds from event creation to delivery).
+
+Blocked webhook URL domains (testing services):
+webhook.site, www.catchhooks.com, webhooktrack.com, www.hooklistener.com, echopoint.dev, play.svix.com, webhookbox.io, hookable.sh, webhookapp.dev, webhook-box.com
+
+IP addresses to whitelist for inbound V2 delivery:
+- 18.116.226.248
+- 3.151.75.183
+
+Legacy note:
+Older Open API /v3.1/Webhook list documentation mentions sandbox IP 20.44.83.105 and production IP 20.22.173.4 for classic webhook notifications. When integrating the V2 platform at webhook.logiwa.com, use the V2 Q&A IP list above.`}],H=new Set(["how","do","i","what","is","the","a","to","in","for","of","and","or","with","can","you","tell","me","about","my","an","on","nasıl","yaparım","nedir","bana","hakkında","için","ile","ve","veya","bir","this","that","from","are","was","were","be","been","being","it","its","as","at","by","we","our","your"]),Q=[["shipment","shipping","ship","outbound","sevkiyat"],["purchase","receiving","receive","inbound","kabul"],["inventory","stock","envanter","stok"],["product","sku","item","urun"],["location","bin","lokasyon","adres"],["license","plate","pallet","palet"],["cycle","count","counting","sayim"],["replenishment","replenish","ikmal"],["allocation","allocate","tahsis"],["warehouse","depo"],["carrier","shippingprovider","kargo"],["return","rma","iade"],["list","search","get","report","liste"],["create","add","post","olustur"],["update","edit","put","patch","guncelle"],["delete","remove","cancel","sil","iptal"],["lql","query","filter","filtre"],["webhook","subscription","callback","webhook.logiwa","hmac"],["shipmentorder","shipment","order"]],O=new Map;Q.forEach(n=>{n.forEach(t=>O.set(t,n))});function v(n=""){return String(n).replace(/([a-z0-9])([A-Z])/g,"$1 $2").toLocaleLowerCase("en-US").replace(/[ıİ]/g,"i").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[şŞ]/g,"s").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").normalize("NFKD").replace(/[\u0300-\u036f]/g," ")}function M(n){return v(n).replace(/[^a-z0-9\s/_-]/g," ").replace(/[/_-]/g," ").split(/\s+/).filter(t=>t.length>2&&!H.has(t))}function E(n,t=!0){const e=M(n);if(!t)return[...new Set(e)];const i=new Set(e);return e.forEach(o=>{var s;const r=O.get(o)||((s=[...O.entries()].find(([l])=>l.length>=4&&o.startsWith(l)))==null?void 0:s[1]);r&&r.forEach(l=>i.add(l))}),[...i]}function W(n,t=260,e=40){const i=String(n||"").split(/\s+/).filter(Boolean);if(i.length<=t)return[i.join(" ")];const o=[],r=t-e;for(let s=0;s<i.length&&(o.push(i.slice(s,s+t).join(" ")),!(s+t>=i.length));s+=r);return o}function P(n){return String(n||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}function f(n,t=0){if(!n||typeof n!="object")return{type:"object"};if(n.$ref)return{$ref:n.$ref};if(t>4)return{type:n.type||"object",format:n.format};const e={};return n.type&&(e.type=n.type),n.format&&(e.format=n.format),n.required&&(e.required=n.required),n.enum&&(e.enum=n.enum),n.nullable&&(e.nullable=n.nullable),n.minLength!=null&&(e.minLength=n.minLength),n.maxLength!=null&&(e.maxLength=n.maxLength),n.minimum!=null&&(e.minimum=n.minimum),n.maximum!=null&&(e.maximum=n.maximum),n.description&&(e.description=String(n.description).slice(0,220)),n.properties&&(e.properties={},Object.entries(n.properties).forEach(([i,o])=>{e.properties[i]=f(o,t+1)})),n.items&&(e.items=f(n.items,t+1)),n.allOf&&(e.allOf=n.allOf.map(i=>f(i,t+1))),n.oneOf&&(e.oneOf=n.oneOf.map(i=>f(i,t+1))),n.anyOf&&(e.anyOf=n.anyOf.map(i=>f(i,t+1))),e}function x(n,t=[]){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.push(e[1])}return Object.values(n).forEach(e=>x(e,t)),t}function j(n){if(!n)return;const t=n.content||{},e=t["application/json"]||t["application/json-patch+json"]||Object.values(t)[0],i=e==null?void 0:e.schema;return{required:n.required,schema:i?f(i):void 0}}function z(n){var e,i,o;const t=(n==null?void 0:n.content)||{};return((e=t["application/json"])==null?void 0:e.schema)||((i=t["application/json-patch+json"])==null?void 0:i.schema)||((o=Object.values(t)[0])==null?void 0:o.schema)}function K(n){if(!n)return;const t={};return Object.entries(n).forEach(([e,i])=>{if(!(/^2/.test(e)||e==="400"))return;const r=z(i);t[e]={description:P(i.description||"").slice(0,160),schema:r?f(r):void 0}}),Object.keys(t).length?t:void 0}function $(n){const t=P(n.description||"").slice(0,800),e=(n.parameters||[]).slice(0,16).map(i=>({name:i.name,in:i.in,required:i.required,description:i.description?P(i.description).slice(0,180):void 0,schema:i.schema?{type:i.schema.type,format:i.schema.format,enum:i.schema.enum}:void 0}));return{tags:n.tags,summary:n.summary,description:t||void 0,parameters:e.length?e:void 0,requestBody:j(n.requestBody),responses:K(n.responses)}}function I(n,t=0,e=[],i=new Set){var o,r,s;if(!n||typeof n!="object"||t>5)return e;if(Array.isArray(n))return n.forEach(l=>I(l,t+1,e,i)),e;if(typeof n.$ref=="string"){const l=(o=n.$ref.match(/^#\/components\/schemas\/(.+)$/))==null?void 0:o[1];if(l&&!i.has(l)){i.add(l),e.push(l);const u=(s=(r=g.components)==null?void 0:r.schemas)==null?void 0:s[l];u&&I(u,t+1,e,i)}}return n.properties&&typeof n.properties=="object"&&Object.keys(n.properties).forEach(l=>e.push(l)),Object.values(n).forEach(l=>{l&&typeof l=="object"&&I(l,t+1,e,i)}),e}function V(n,t,e){const i=(e.parameters||[]).map(s=>s.name).join(" "),o=x(e.requestBody||{});x(e.responses||{},o);const r=I(e.requestBody);return I(e.responses,0,r),[t.toUpperCase(),n,e.summary||"",(e.tags||[]).join(" "),P(e.description||"").slice(0,800),i,[...new Set(o)].join(" "),[...new Set(r)].join(" ")].join(" ")}function U(n){const t=new Map;let e=0;const i=n.map(o=>{const r=M(o.searchText),s=new Map;return r.forEach(l=>s.set(l,(s.get(l)||0)+1)),s.forEach((l,u)=>{t.set(u,(t.get(u)||0)+1)}),e+=r.length,{...o,tokens:r,frequencies:s,normalizedText:v(o.searchText)}});return{documents:i,documentFrequency:t,averageLength:e/Math.max(i.length,1)}}function A(n,t,e,i=null){const o=E(t),r=E(t,!1);if(o.length===0)return[];const s=v(t).trim(),l=n.documents.length,u=1.5,y=.72,m=n.documents.map(a=>{let d=0;o.forEach(h=>{const w=a.frequencies.get(h)||0;if(w===0)return;const k=n.documentFrequency.get(h)||0,B=Math.log(1+(l-k+.5)/(k+.5)),G=w+u*(1-y+y*a.tokens.length/Math.max(n.averageLength,1));d+=B*(w*(u+1)/G)});const p=v(a.title||"");return r.forEach(h=>{p.includes(h)&&(d+=3.5),a.normalizedText.includes(h)&&(d+=.25)}),s.length>4&&a.normalizedText.includes(s)&&(d+=8),{...a,score:d}}).filter(a=>a.score>0).sort((a,d)=>d.score-a.score);if(!i)return m.slice(0,e);const c=[],b=new Map;for(const a of m){const d=a[i],p=b.get(d)||0;if(!(p>=2)&&(c.push(a),b.set(d,p+1),c.length>=e))break}return c}const N=D.flatMap((n,t)=>W(n.content).map((e,i)=>({id:`help-${t}-${i}`,articleId:`help-${t}`,title:n.title,url:n.url,content:e,chunkIndex:i,searchText:`${n.title} ${e}`}))),T=[];Object.entries(g.paths||{}).forEach(([n,t])=>{Object.entries(t).forEach(([e,i])=>{if(!i||typeof i!="object")return;const o=`${e.toUpperCase()} ${n} ${i.summary||""}`;T.push({id:`swagger-${T.length}`,path:n,method:e.toLowerCase(),operation:$(i),title:o,searchText:V(n,e,i)})})});const _=C.flatMap((n,t)=>W(n.content).map((e,i)=>({id:`kb-${t}-${i}`,articleId:`kb-${t}`,title:n.title,url:n.url,origin:n.origin,content:e,chunkIndex:i,searchText:`${n.title} ${n.origin||""} ${n.filename||""} ${e}`}))),J=U(N),Z=U(T),Y=U(_);function q(n,t=6){return A(J,n,t,"articleId").map(e=>({sourceId:`HC-${e.articleId.replace("help-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function L(n,t=new Set){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.add(e[1])}return Object.values(n).forEach(e=>L(e,t)),t}function F(n,t=4){return A(Y,n,t,"articleId").map(e=>({sourceId:`KB-${e.articleId.replace("kb-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,origin:e.origin,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function R(n,t=6){var y,m,c,b;const e=A(Z,n,t),i={openapi:g.openapi,info:{title:(y=g.info)==null?void 0:y.title,version:(m=g.info)==null?void 0:m.version},paths:{},components:{schemas:{}}},o=e.map(a=>(i.paths[a.path]||(i.paths[a.path]={}),i.paths[a.path][a.method]=a.operation,{sourceId:`API-${a.id.replace("swagger-","")}`,method:a.method.toUpperCase(),path:a.path,summary:a.operation.summary||"",score:Number(a.score.toFixed(3))})),r=[...L(i.paths)].map(a=>({name:a,hop:0})),s=new Set,l=36,u=3;for(;r.length>0&&Object.keys(i.components.schemas).length<l;){const{name:a,hop:d}=r.shift();if(s.has(a))continue;s.add(a);const p=(b=(c=g.components)==null?void 0:c.schemas)==null?void 0:b[a];p&&(i.components.schemas[a]=f(p),!(d+1>=u)&&L(p).forEach(h=>{s.has(h)||r.push({name:h,hop:d+1})}))}return{document:i,sources:o}}function S(n,t,e){const i=new Set,o=[];for(const r of[...n,...t]){const s=r.sourceId;if(!(!s||i.has(s))&&(i.add(s),o.push(r),o.length>=e))break}return o}function en(n,{helpLimit:t=6,swaggerLimit:e=6,knowledgeLimit:i=4}={}){var m;const o=q(n,t),r=R(n,e),s=F(n,i),l=[n,...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`),...s.map(c=>c.title)].join(`
+`),u=[n,...o.map(c=>c.title),...s.map(c=>c.title)].join(`
+`),y=[n,...o.map(c=>c.title),...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`)].join(`
+`);return{query:n,coverage:{indexedHelpCenterArticles:D.length,indexedHelpCenterChunks:N.length,indexedSwaggerOperations:T.length,indexedSwaggerSchemas:Object.keys(((m=g.components)==null?void 0:m.schemas)||{}).length,indexedKnowledgeDocuments:C.length,indexedKnowledgeChunks:_.length},helpCenter:S(o,q(l,t),t),swagger:(()=>{var p,h,w;const c=R(u,e),b=S(r.sources,c.sources,e),a={},d={};for(const k of[r,c])Object.assign(a,((p=k.document)==null?void 0:p.paths)||{}),Object.assign(d,((w=(h=k.document)==null?void 0:h.components)==null?void 0:w.schemas)||{});return{sources:b,document:{openapi:r.document.openapi,info:r.document.info,paths:a,components:{schemas:d}}}})(),knowledge:S(s,F(y,i),i)}}function tn(){var n;return{helpCenterArticles:D.length,helpCenterChunks:N.length,swaggerOperations:T.length,swaggerSchemas:Object.keys(((n=g.components)==null?void 0:n.schemas)||{}).length,knowledgeDocuments:C.length,knowledgeChunks:_.length}}export{E as extractKeywords,tn as getDocumentationIndexStats,q as getRelevantArticles,F as getRelevantKnowledge,R as getRelevantSwagger,en as searchDocumentation};
