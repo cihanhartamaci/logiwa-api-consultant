@@ -1,4 +1,4 @@
-import{s as g}from"./swagger-data-CD9pdyUO.js";import{h as D}from"./help-center-data-CYub9J39.js";const C=[{title:"Create & Update Products",origin:"Magna-Tiles / API_Support_Doc.zip",filename:"Create & Update Products.pdf",url:"kb://magna-tiles/API_Support_Doc/Create & Update Products.pdf",content:`--- Page 1 ---
+import{s as f}from"./swagger-data-CD9pdyUO.js";import{h as D}from"./help-center-data-CYub9J39.js";const C=[{title:"Create & Update Products",origin:"Magna-Tiles / API_Support_Doc.zip",filename:"Create & Update Products.pdf",url:"kb://magna-tiles/API_Support_Doc/Create & Update Products.pdf",content:`--- Page 1 ---
  
  
  Logiwa 
@@ -3274,7 +3274,219 @@ IP addresses to whitelist for inbound V2 delivery:
 - 3.151.75.183
 
 Legacy note:
-Older Open API /v3.1/Webhook list documentation mentions sandbox IP 20.44.83.105 and production IP 20.22.173.4 for classic webhook notifications. When integrating the V2 platform at webhook.logiwa.com, use the V2 Q&A IP list above.`}],H=new Set(["how","do","i","what","is","the","a","to","in","for","of","and","or","with","can","you","tell","me","about","my","an","on","nasıl","yaparım","nedir","bana","hakkında","için","ile","ve","veya","bir","this","that","from","are","was","were","be","been","being","it","its","as","at","by","we","our","your"]),Q=[["shipment","shipping","ship","outbound","sevkiyat"],["purchase","receiving","receive","inbound","kabul"],["inventory","stock","envanter","stok"],["product","sku","item","urun"],["location","bin","lokasyon","adres"],["license","plate","pallet","palet"],["cycle","count","counting","sayim"],["replenishment","replenish","ikmal"],["allocation","allocate","tahsis"],["warehouse","depo"],["carrier","shippingprovider","kargo"],["return","rma","iade"],["list","search","get","report","liste"],["create","add","post","olustur"],["update","edit","put","patch","guncelle"],["delete","remove","cancel","sil","iptal"],["lql","query","filter","filtre"],["webhook","subscription","callback","webhook.logiwa","hmac"],["shipmentorder","shipment","order"]],O=new Map;Q.forEach(n=>{n.forEach(t=>O.set(t,n))});function v(n=""){return String(n).replace(/([a-z0-9])([A-Z])/g,"$1 $2").toLocaleLowerCase("en-US").replace(/[ıİ]/g,"i").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[şŞ]/g,"s").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").normalize("NFKD").replace(/[\u0300-\u036f]/g," ")}function M(n){return v(n).replace(/[^a-z0-9\s/_-]/g," ").replace(/[/_-]/g," ").split(/\s+/).filter(t=>t.length>2&&!H.has(t))}function E(n,t=!0){const e=M(n);if(!t)return[...new Set(e)];const i=new Set(e);return e.forEach(o=>{var s;const r=O.get(o)||((s=[...O.entries()].find(([l])=>l.length>=4&&o.startsWith(l)))==null?void 0:s[1]);r&&r.forEach(l=>i.add(l))}),[...i]}function W(n,t=260,e=40){const i=String(n||"").split(/\s+/).filter(Boolean);if(i.length<=t)return[i.join(" ")];const o=[],r=t-e;for(let s=0;s<i.length&&(o.push(i.slice(s,s+t).join(" ")),!(s+t>=i.length));s+=r);return o}function P(n){return String(n||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}function f(n,t=0){if(!n||typeof n!="object")return{type:"object"};if(n.$ref)return{$ref:n.$ref};if(t>4)return{type:n.type||"object",format:n.format};const e={};return n.type&&(e.type=n.type),n.format&&(e.format=n.format),n.required&&(e.required=n.required),n.enum&&(e.enum=n.enum),n.nullable&&(e.nullable=n.nullable),n.minLength!=null&&(e.minLength=n.minLength),n.maxLength!=null&&(e.maxLength=n.maxLength),n.minimum!=null&&(e.minimum=n.minimum),n.maximum!=null&&(e.maximum=n.maximum),n.description&&(e.description=String(n.description).slice(0,220)),n.properties&&(e.properties={},Object.entries(n.properties).forEach(([i,o])=>{e.properties[i]=f(o,t+1)})),n.items&&(e.items=f(n.items,t+1)),n.allOf&&(e.allOf=n.allOf.map(i=>f(i,t+1))),n.oneOf&&(e.oneOf=n.oneOf.map(i=>f(i,t+1))),n.anyOf&&(e.anyOf=n.anyOf.map(i=>f(i,t+1))),e}function x(n,t=[]){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.push(e[1])}return Object.values(n).forEach(e=>x(e,t)),t}function j(n){if(!n)return;const t=n.content||{},e=t["application/json"]||t["application/json-patch+json"]||Object.values(t)[0],i=e==null?void 0:e.schema;return{required:n.required,schema:i?f(i):void 0}}function z(n){var e,i,o;const t=(n==null?void 0:n.content)||{};return((e=t["application/json"])==null?void 0:e.schema)||((i=t["application/json-patch+json"])==null?void 0:i.schema)||((o=Object.values(t)[0])==null?void 0:o.schema)}function K(n){if(!n)return;const t={};return Object.entries(n).forEach(([e,i])=>{if(!(/^2/.test(e)||e==="400"))return;const r=z(i);t[e]={description:P(i.description||"").slice(0,160),schema:r?f(r):void 0}}),Object.keys(t).length?t:void 0}function $(n){const t=P(n.description||"").slice(0,800),e=(n.parameters||[]).slice(0,16).map(i=>({name:i.name,in:i.in,required:i.required,description:i.description?P(i.description).slice(0,180):void 0,schema:i.schema?{type:i.schema.type,format:i.schema.format,enum:i.schema.enum}:void 0}));return{tags:n.tags,summary:n.summary,description:t||void 0,parameters:e.length?e:void 0,requestBody:j(n.requestBody),responses:K(n.responses)}}function I(n,t=0,e=[],i=new Set){var o,r,s;if(!n||typeof n!="object"||t>5)return e;if(Array.isArray(n))return n.forEach(l=>I(l,t+1,e,i)),e;if(typeof n.$ref=="string"){const l=(o=n.$ref.match(/^#\/components\/schemas\/(.+)$/))==null?void 0:o[1];if(l&&!i.has(l)){i.add(l),e.push(l);const u=(s=(r=g.components)==null?void 0:r.schemas)==null?void 0:s[l];u&&I(u,t+1,e,i)}}return n.properties&&typeof n.properties=="object"&&Object.keys(n.properties).forEach(l=>e.push(l)),Object.values(n).forEach(l=>{l&&typeof l=="object"&&I(l,t+1,e,i)}),e}function V(n,t,e){const i=(e.parameters||[]).map(s=>s.name).join(" "),o=x(e.requestBody||{});x(e.responses||{},o);const r=I(e.requestBody);return I(e.responses,0,r),[t.toUpperCase(),n,e.summary||"",(e.tags||[]).join(" "),P(e.description||"").slice(0,800),i,[...new Set(o)].join(" "),[...new Set(r)].join(" ")].join(" ")}function U(n){const t=new Map;let e=0;const i=n.map(o=>{const r=M(o.searchText),s=new Map;return r.forEach(l=>s.set(l,(s.get(l)||0)+1)),s.forEach((l,u)=>{t.set(u,(t.get(u)||0)+1)}),e+=r.length,{...o,tokens:r,frequencies:s,normalizedText:v(o.searchText)}});return{documents:i,documentFrequency:t,averageLength:e/Math.max(i.length,1)}}function A(n,t,e,i=null){const o=E(t),r=E(t,!1);if(o.length===0)return[];const s=v(t).trim(),l=n.documents.length,u=1.5,y=.72,m=n.documents.map(a=>{let d=0;o.forEach(h=>{const w=a.frequencies.get(h)||0;if(w===0)return;const k=n.documentFrequency.get(h)||0,B=Math.log(1+(l-k+.5)/(k+.5)),G=w+u*(1-y+y*a.tokens.length/Math.max(n.averageLength,1));d+=B*(w*(u+1)/G)});const p=v(a.title||"");return r.forEach(h=>{p.includes(h)&&(d+=3.5),a.normalizedText.includes(h)&&(d+=.25)}),s.length>4&&a.normalizedText.includes(s)&&(d+=8),{...a,score:d}}).filter(a=>a.score>0).sort((a,d)=>d.score-a.score);if(!i)return m.slice(0,e);const c=[],b=new Map;for(const a of m){const d=a[i],p=b.get(d)||0;if(!(p>=2)&&(c.push(a),b.set(d,p+1),c.length>=e))break}return c}const N=D.flatMap((n,t)=>W(n.content).map((e,i)=>({id:`help-${t}-${i}`,articleId:`help-${t}`,title:n.title,url:n.url,content:e,chunkIndex:i,searchText:`${n.title} ${e}`}))),T=[];Object.entries(g.paths||{}).forEach(([n,t])=>{Object.entries(t).forEach(([e,i])=>{if(!i||typeof i!="object")return;const o=`${e.toUpperCase()} ${n} ${i.summary||""}`;T.push({id:`swagger-${T.length}`,path:n,method:e.toLowerCase(),operation:$(i),title:o,searchText:V(n,e,i)})})});const _=C.flatMap((n,t)=>W(n.content).map((e,i)=>({id:`kb-${t}-${i}`,articleId:`kb-${t}`,title:n.title,url:n.url,origin:n.origin,content:e,chunkIndex:i,searchText:`${n.title} ${n.origin||""} ${n.filename||""} ${e}`}))),J=U(N),Z=U(T),Y=U(_);function q(n,t=6){return A(J,n,t,"articleId").map(e=>({sourceId:`HC-${e.articleId.replace("help-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function L(n,t=new Set){if(!n||typeof n!="object")return t;if(typeof n.$ref=="string"){const e=n.$ref.match(/^#\/components\/schemas\/(.+)$/);e&&t.add(e[1])}return Object.values(n).forEach(e=>L(e,t)),t}function F(n,t=4){return A(Y,n,t,"articleId").map(e=>({sourceId:`KB-${e.articleId.replace("kb-","")}-${e.chunkIndex+1}`,title:e.title,url:e.url,origin:e.origin,content:e.content,chunk:e.chunkIndex+1,score:Number(e.score.toFixed(3))}))}function R(n,t=6){var y,m,c,b;const e=A(Z,n,t),i={openapi:g.openapi,info:{title:(y=g.info)==null?void 0:y.title,version:(m=g.info)==null?void 0:m.version},paths:{},components:{schemas:{}}},o=e.map(a=>(i.paths[a.path]||(i.paths[a.path]={}),i.paths[a.path][a.method]=a.operation,{sourceId:`API-${a.id.replace("swagger-","")}`,method:a.method.toUpperCase(),path:a.path,summary:a.operation.summary||"",score:Number(a.score.toFixed(3))})),r=[...L(i.paths)].map(a=>({name:a,hop:0})),s=new Set,l=36,u=3;for(;r.length>0&&Object.keys(i.components.schemas).length<l;){const{name:a,hop:d}=r.shift();if(s.has(a))continue;s.add(a);const p=(b=(c=g.components)==null?void 0:c.schemas)==null?void 0:b[a];p&&(i.components.schemas[a]=f(p),!(d+1>=u)&&L(p).forEach(h=>{s.has(h)||r.push({name:h,hop:d+1})}))}return{document:i,sources:o}}function S(n,t,e){const i=new Set,o=[];for(const r of[...n,...t]){const s=r.sourceId;if(!(!s||i.has(s))&&(i.add(s),o.push(r),o.length>=e))break}return o}function en(n,{helpLimit:t=6,swaggerLimit:e=6,knowledgeLimit:i=4}={}){var m;const o=q(n,t),r=R(n,e),s=F(n,i),l=[n,...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`),...s.map(c=>c.title)].join(`
-`),u=[n,...o.map(c=>c.title),...s.map(c=>c.title)].join(`
-`),y=[n,...o.map(c=>c.title),...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`)].join(`
-`);return{query:n,coverage:{indexedHelpCenterArticles:D.length,indexedHelpCenterChunks:N.length,indexedSwaggerOperations:T.length,indexedSwaggerSchemas:Object.keys(((m=g.components)==null?void 0:m.schemas)||{}).length,indexedKnowledgeDocuments:C.length,indexedKnowledgeChunks:_.length},helpCenter:S(o,q(l,t),t),swagger:(()=>{var p,h,w;const c=R(u,e),b=S(r.sources,c.sources,e),a={},d={};for(const k of[r,c])Object.assign(a,((p=k.document)==null?void 0:p.paths)||{}),Object.assign(d,((w=(h=k.document)==null?void 0:h.components)==null?void 0:w.schemas)||{});return{sources:b,document:{openapi:r.document.openapi,info:r.document.info,paths:a,components:{schemas:d}}}})(),knowledge:S(s,F(y,i),i)}}function tn(){var n;return{helpCenterArticles:D.length,helpCenterChunks:N.length,swaggerOperations:T.length,swaggerSchemas:Object.keys(((n=g.components)==null?void 0:n.schemas)||{}).length,knowledgeDocuments:C.length,knowledgeChunks:_.length}}export{E as extractKeywords,tn as getDocumentationIndexStats,q as getRelevantArticles,F as getRelevantKnowledge,R as getRelevantSwagger,en as searchDocumentation};
+Older Open API /v3.1/Webhook list documentation mentions sandbox IP 20.44.83.105 and production IP 20.22.173.4 for classic webhook notifications. When integrating the V2 platform at webhook.logiwa.com, use the V2 Q&A IP list above.`},{title:"Integration mapping methodology",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-mapping-methodology.md",url:"kb://aintegration/playbooks/ie-mapping-methodology.md",content:`Logiwa Integration Engineer — mapping methodology
+
+Purpose:
+Design a field mapping between a target system (ERP, marketplace, storefront, carrier) and Logiwa Open API / Webhooks without inventing Logiwa fields. Logiwa columns must come from Open API Swagger, Help Center, or indexed API support guides. Target columns are conceptual until verified against the target system's own API documentation.
+
+Standard mapping table columns:
+| TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes |
+
+Column definitions:
+- TargetConcept: business object on the external system (Sales Order, Item, Tracking Number, ASN, etc.).
+- TargetField (verify): candidate field path on the target API. Always treat as "verify against target docs" — never claim official third-party schema without their documentation.
+- LogiwaField: exact property from Logiwa request/response schemas or webhook payload (e.g. code, sku, clientIdentifier, warehouseIdentifier).
+- Transform: how to convert values (passthrough, lookup table, enum map, date to ISO-8601, nested→flat, unit conversion).
+- Notes: required vs optional, defaults, multi-tenant client rules, idempotency.
+
+Recommended workflow:
+1. Name the flow and direction: inbound to Logiwa (create/update via Open API) or outbound from Logiwa (webhooks / list polls).
+2. List Logiwa operations from Swagger (method + path) and webhook events from Webhook v2 when applicable.
+3. Fill LogiwaField only from retrieved schemas or example JSON in knowledge docs.
+4. Fill TargetField as placeholders and mark every row that needs engineer verification.
+5. Add transforms for enums (status codes), identifiers (GUID vs external code), and time zones.
+6. Document error handling: which HTTP codes retry, how duplicates are detected (e.g. Code.eq or channelOrderNumber).
+
+Common transform patterns:
+- Lookup: map target warehouse code → Logiwa warehouseIdentifier via Client/Warehouse list APIs.
+- Enum map: target status string → Logiwa status / CurrentStatus values observed on webhooks.
+- Identity: target SKU → Logiwa sku; keep case and packing unit rules explicit.
+- Nesting: flatten target address object into shipmentAddress.* fields on ShipmentOrder.
+- Dates: normalize to ISO-8601 for Logiwa date-time fields.
+
+Anti-patterns:
+- Inventing Logiwa property names not present in Swagger.
+- Copying SAP/NetSuite/eBay field names as if they were confirmed facts.
+- One giant sync without idempotency or clientIdentifier scoping.`},{title:"Integration architecture patterns",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-architecture-patterns.md",url:"kb://aintegration/playbooks/ie-architecture-patterns.md",content:`Logiwa Integration Engineer — architecture patterns
+
+Patterns for connecting Logiwa to SAP, NetSuite, marketplaces, carriers, and storefronts.
+
+1) Inbound command (target → Logiwa Open API)
+- Authenticate with POST /v3.1/Authorize/token (Bearer).
+- Create or update Logiwa entities via documented endpoints (Product/create, ShipmentOrder/create, PurchaseOrder/create, etc.).
+- Use LQL list endpoints for lookups (Sku.eq, Code.eq, DisplayName.eq).
+- Respect rate limit guidance (~6 req/s) and bulk limits (e.g. product create bulk max 50 per request in support guides).
+
+2) Outbound event (Logiwa → target)
+- Prefer Webhook Platform v2.0 at https://webhook.logiwa.com/ (JWT login, POST /v1/webhooks, GET /v1/events).
+- Legacy alternative: /v3.1/Helper/webhooktopics + /v3.1/Webhook/create on myapi.logiwa.com when the customer still uses V1 topics.
+- Respond to webhook POSTs within 10 seconds (V2); process asynchronously; verify HMAC headers.
+
+3) Poll / reconcile
+- Periodic list calls with LQL date windows (e.g. ActualShipmentDate.bt=...) when webhooks are unavailable or for catch-up.
+- Store last successful watermark; avoid full table scans.
+
+4) Multi-tenant / client scoping
+- Logiwa often requires clientIdentifier on creates or allows ignoreClient / allowedClientIdentifiers on webhooks.
+- Resolve client GUIDs via Client/list before mapping.
+
+5) Idempotency and retries
+- Choose a natural business key (order code, channelOrderNumber, SKU+client) and check existence with list/LQL before create.
+- Retry 5xx / network; do not blindly retry 4xx without fixing the payload.
+- For V2 webhooks: 2xx success, 4xx permanent fail, 5xx/429 retryable.
+
+6) Sync vs async
+- Synchronous: small create/update with immediate HTTP response.
+- Asynchronous: bulk endpoints that require webhook subscription for results (e.g. product create bulk + openapi/product/create/bulk topic in legacy guides).
+
+Integration Engineer deliverables:
+- Sequence diagram (auth → lookup → create → webhook → target update)
+- Mapping table (see Integration mapping methodology)
+- Error catalog and runbook
+- Sandbox vs production base URLs: myapisandbox.logiwa.com / myapi.logiwa.com`},{title:"ERP product and inventory sync playbook (SAP NetSuite style)",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-erp-product-inventory.md",url:"kb://aintegration/playbooks/ie-erp-product-inventory.md",content:`Logiwa Integration Engineer — ERP product & inventory sync (SAP / NetSuite style)
+
+Scope:
+Typical ERP master-data and inventory sync into Logiwa. Target field names below are conceptual — verify against SAP / NetSuite (or other ERP) API docs.
+
+Direction A — Product master inbound (ERP → Logiwa)
+Logiwa side (from Open API / support guides):
+- POST /v3.1/Product/create and/or Product/create/bulk
+- PUT /v3.1/Product/update (send full existing payload plus changes)
+- Lookups: Product/list with Sku.eq and ClientIdentifier.eq; Helper endpoints for pack/weight/dimension units
+
+Example mapping rows (TargetField = verify):
+| TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes |
+| Item | ItemCode / itemid (verify) | sku | passthrough | Unique per client |
+| Item | DisplayName (verify) | name | passthrough | |
+| Item | Barcode (verify) | upc[] | wrap as array | |
+| Item | Client / Subsidiary (verify) | clientIdentifier | GUID lookup via Client/list | |
+| Item | UoM (verify) | uomPackTypeName | enum/map to Logiwa pack type | Often "Unit" |
+| Item | Weight/Dims (verify) | packingSettings.* | unit IDs from Helper/*unittypes | |
+
+Kit items: kitTypeId 1 = kit-to-order, 2 = kit-to-stock; kitComponentList.componentProductIdentifier + quantity from Product/list.
+
+Bulk: max 50 products per bulk request in Magna support guide; subscribe bulk webhook topic for results when using bulk create.
+
+Direction B — Inventory visibility (Logiwa → ERP or ERP ← Logiwa list)
+Logiwa side:
+- GET Inventory/list and Inventory/kit/list with InventoryStatusId.eq and Location / Sku filters
+- Webhook V2 InventoryMovementRecorded (legacy topic wms/inventory/transaction) for near-real-time movements
+
+Map TransactionTypeDefinition, ProductSKU, From/To location codes, Action/To quantities to ERP inventory adjustment or transfer concepts — verify ERP posting object names.
+
+Do not invent ERP BAPI/SuiteTalk property names; use placeholder TargetField and mark verify.`},{title:"Marketplace and storefront order ingest playbook (eBay Squarespace style)",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-marketplace-order-ingest.md",url:"kb://aintegration/playbooks/ie-marketplace-order-ingest.md",content:`Logiwa Integration Engineer — marketplace / storefront order ingest (eBay / Squarespace style)
+
+Scope:
+Pull or receive sales orders from a marketplace/storefront and create shipment orders in Logiwa; push status and tracking back.
+
+Inbound — create shipment order in Logiwa
+Logiwa side:
+- POST /v3.1/ShipmentOrder/create (and bulk variants when documented)
+- Lookups: warehouseIdentifier, clientIdentifier, shippingOptionIdentifier, carrierId as required by schema
+- Example payload fields from support guides: code, channelOrderNumber, customer, shipmentAddress, shipmentOrderLineList (sku, packType, packQuantity, unitPrice), tags, giftNote
+
+Example mapping (TargetField = verify against eBay / Squarespace / similar docs):
+| TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes |
+| Order | orderId / order_number (verify) | code or channelOrderNumber | choose one as business key | Use LQL Code.eq before recreate |
+| Order | buyer name/email (verify) | customer.* / shipmentAddress.* | split first/last | |
+| Order | ship-to address (verify) | shipmentAddress.* | country/state codes | |
+| Line | SKU (verify) | shipmentOrderLineList.sku | must exist in Logiwa Product | |
+| Line | qty (verify) | packQuantity | number | |
+| Order | paid/ready status (verify) | (gate create) | only create when fulfillable | |
+
+Outbound — status & shipment back to marketplace
+Logiwa Webhook V2 events (prefer webhook.logiwa.com):
+- ShipmentStatusChanged ← legacy wms/shipmentorder/statuschange
+- ShipmentOrderCreated ← wms/shipmentorder/create
+- ShipmentDispatched ← wms/shipmentorder/shipment
+- ShipmentDetailsUpdated ← wms/shipmentorder/update
+
+Use CurrentStatus / tracking fields from webhook payloads (see Shipment Inventory Webhook Guide) to call marketplace "mark as shipped" APIs — verify those target endpoints separately.
+
+Idempotency: store mapping of marketplace order id ↔ Logiwa ShipmentOrder identifier/code.`},{title:"Carrier and shipping label flow playbook (Shippo FedEx style)",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-carrier-shipping.md",url:"kb://aintegration/playbooks/ie-carrier-shipping.md",content:`Logiwa Integration Engineer — carrier / label flow (Shippo / FedEx style)
+
+Scope:
+Connect Logiwa shipment lifecycle to external rating, label purchase, or carrier systems (Shippo, FedEx, UPS-style platforms). Target API field names must be verified in carrier docs.
+
+Logiwa-side anchors:
+- Shipment order fields related to carrier: carrierId, shippingOptionIdentifier, carrierPackageName, currentTrackingNumber, totalShippingCost, packingInstructions (from create examples / schemas)
+- Webhook V2 ShipmentDispatched (legacy wms/shipmentorder/shipment) for package list, tracking numbers, carrier names
+- ShipmentStatusChanged for WMS status progression
+
+Typical flow options:
+A) Logiwa-native carrier setup: configure carrier in Logiwa; integration only syncs tracking outbound via webhook.
+B) External label provider: integration reads ready-to-ship orders from Logiwa (list/LQL or status webhook), calls Shippo/FedEx (verify) to buy label, then writes tracking back via Logiwa update endpoints if available in Swagger — only use update fields present in retrieved schemas.
+
+Example mapping (TargetField = verify):
+| TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes |
+| Shipment | tracking_number (verify) | currentTrackingNumber / webhook MasterTrackingNumber | passthrough | From ShipmentDispatched payload examples |
+| Shipment | carrier account (verify) | carrierId / CarrierSetup | lookup table | |
+| Package | weight/dims (verify) | packing / package fields on webhook ProductList | unit convert | |
+| Rate | service level (verify) | shippingOptionIdentifier | GUID lookup | |
+
+Security: never log full carrier API keys; store secrets outside chat.
+
+Always cite Logiwa webhook/Open API sources for Logiwa columns; mark carrier columns as verify.`},{title:"Purchase order and receiving integration playbook",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-purchase-order-receiving.md",url:"kb://aintegration/playbooks/ie-purchase-order-receiving.md",content:`Logiwa Integration Engineer — purchase order & receiving integration
+
+Scope:
+ERP or supplier systems create expected receipts in Logiwa; receiving completion flows back via webhooks and detail APIs.
+
+Inbound — create PO in Logiwa
+Logiwa side:
+- POST /v3.1/PurchaseOrder/create
+- Related: purchase order type setup endpoints; receive endpoint POST /v3.1/PurchaseOrder/receive when used
+- Example fields from support JSON: code, clientIdentifier, vendor, purchaseOrderTypeName, warehouseIdentifier, purchaseOrderDate, plannedReceivingDate, plannedArrivalDate, referenceNumber, purchaseOrderLineList (sku, packType, packQuantity, warehouseLocation, lotBatchNumber, expiryDate, …)
+
+Example mapping (TargetField = verify against ERP ASN/PO APIs):
+| TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes |
+| PurchaseOrder | DocNum / po_number (verify) | code | passthrough | Idempotent Code.eq check |
+| PurchaseOrder | vendor code (verify) | vendor | map vendor master | |
+| PurchaseOrder | warehouse (verify) | warehouseIdentifier | GUID lookup | |
+| Line | item (verify) | sku | must exist | |
+| Line | qty (verify) | packQuantity | | |
+
+Outbound — receiving / status
+- Webhook V2 PurchaseOrderStatusChanged (legacy wms/purchaseorder/statuschange)
+- PO Receipt playbook: on Completed status, call PurchaseOrder/detail/{identifier} for line-level received quantities and missing qty calculation
+- Save Identifier and Code from webhook for subsequent GETs
+
+Integration checklist:
+1. Create PO when ERP releases ASN/PO
+2. Subscribe status webhook
+3. On Completed, pull detail and post goods receipt in ERP (verify ERP API)
+4. Handle partial receipts via status + detail deltas`},{title:"Webhook-driven outbound sync checklist",origin:"AIntegration / Integration Engineer Playbooks",filename:"ie-webhook-outbound-checklist.md",url:"kb://aintegration/playbooks/ie-webhook-outbound-checklist.md",content:`Logiwa Integration Engineer — webhook-driven outbound sync checklist
+
+Prefer Webhook Platform v2.0 (https://webhook.logiwa.com/) for new work.
+
+V2 setup checklist:
+1. POST /v1/auth/login with Email + Password → Bearer JWT
+2. GET /v1/events for live event IDs
+3. POST /v1/webhooks with url (HTTPS), event, allowedClientIdentifiers ([] = all clients), active
+4. Whitelist delivery IPs 18.116.226.248 and 3.151.75.183
+5. Verify HMAC (x-mylogiwa-hmac-sha256); respond 2xx within 10 seconds
+6. Expect up to 5 minutes cache delay after create/update
+
+V2 event ↔ legacy V1 topic map (for migration):
+| V2 Event | Legacy V1 topic |
+| ShipmentStatusChanged | wms/shipmentorder/statuschange |
+| ShipmentOrderCreated | wms/shipmentorder/create |
+| ShipmentDetailsUpdated | wms/shipmentorder/update |
+| ShipmentDispatched | wms/shipmentorder/shipment |
+| ProductCreated | wms/product/create |
+| ProductInformationUpdated | wms/product/update |
+| PurchaseOrderStatusChanged | wms/purchaseorder/statuschange |
+| InventoryMovementRecorded | wms/inventory/transaction |
+| ShipmentOrderMergeActions | wms/shipmentorder/mergeorder |
+
+Legacy Open API path (when required): Helper/webhooktopics → Webhook/create with topic + address + clientIdentifier/ignoreClient.
+
+Outbound sync design:
+- Subscribe only to events needed for the connector (start with one)
+- Persist event-id / subscription-id headers to detect duplicates
+- Map webhook payload fields to target system update APIs using the mapping methodology table
+- Fall back to LQL list reconciliation jobs for missed events
+
+Do not use blocked testing URL domains (webhook.site and similar) on V2.`}],H=new Set(["how","do","i","what","is","the","a","to","in","for","of","and","or","with","can","you","tell","me","about","my","an","on","nasıl","yaparım","nedir","bana","hakkında","için","ile","ve","veya","bir","this","that","from","are","was","were","be","been","being","it","its","as","at","by","we","our","your"]),Q=[["shipment","shipping","ship","outbound","sevkiyat"],["purchase","receiving","receive","inbound","kabul"],["inventory","stock","envanter","stok"],["product","sku","item","urun"],["location","bin","lokasyon","adres"],["license","plate","pallet","palet"],["cycle","count","counting","sayim"],["replenishment","replenish","ikmal"],["allocation","allocate","tahsis"],["warehouse","depo"],["carrier","shippingprovider","kargo","shippo","fedex"],["return","rma","iade"],["list","search","get","report","liste"],["create","add","post","olustur"],["update","edit","put","patch","guncelle"],["delete","remove","cancel","sil","iptal"],["lql","query","filter","filtre"],["webhook","subscription","callback","webhook.logiwa","hmac"],["shipmentorder","shipment","order"],["integration","mapping","connector","entegrasyon","playbook"],["erp","netsuite","sap","oracle"],["marketplace","ebay","squarespace","storefront","shopify"]],O=new Map;Q.forEach(e=>{e.forEach(t=>O.set(t,e))});function T(e=""){return String(e).replace(/([a-z0-9])([A-Z])/g,"$1 $2").toLocaleLowerCase("en-US").replace(/[ıİ]/g,"i").replace(/[ğĞ]/g,"g").replace(/[üÜ]/g,"u").replace(/[şŞ]/g,"s").replace(/[öÖ]/g,"o").replace(/[çÇ]/g,"c").normalize("NFKD").replace(/[\u0300-\u036f]/g," ")}function M(e){return T(e).replace(/[^a-z0-9\s/_-]/g," ").replace(/[/_-]/g," ").split(/\s+/).filter(t=>t.length>2&&!H.has(t))}function q(e,t=!0){const n=M(e);if(!t)return[...new Set(n)];const i=new Set(n);return n.forEach(o=>{var s;const r=O.get(o)||((s=[...O.entries()].find(([l])=>l.length>=4&&o.startsWith(l)))==null?void 0:s[1]);r&&r.forEach(l=>i.add(l))}),[...i]}function W(e,t=260,n=40){const i=String(e||"").split(/\s+/).filter(Boolean);if(i.length<=t)return[i.join(" ")];const o=[],r=t-n;for(let s=0;s<i.length&&(o.push(i.slice(s,s+t).join(" ")),!(s+t>=i.length));s+=r);return o}function P(e){return String(e||"").replace(/<[^>]+>/g," ").replace(/\s+/g," ").trim()}function g(e,t=0){if(!e||typeof e!="object")return{type:"object"};if(e.$ref)return{$ref:e.$ref};if(t>4)return{type:e.type||"object",format:e.format};const n={};return e.type&&(n.type=e.type),e.format&&(n.format=e.format),e.required&&(n.required=e.required),e.enum&&(n.enum=e.enum),e.nullable&&(n.nullable=e.nullable),e.minLength!=null&&(n.minLength=e.minLength),e.maxLength!=null&&(n.maxLength=e.maxLength),e.minimum!=null&&(n.minimum=e.minimum),e.maximum!=null&&(n.maximum=e.maximum),e.description&&(n.description=String(e.description).slice(0,220)),e.properties&&(n.properties={},Object.entries(e.properties).forEach(([i,o])=>{n.properties[i]=g(o,t+1)})),e.items&&(n.items=g(e.items,t+1)),e.allOf&&(n.allOf=e.allOf.map(i=>g(i,t+1))),e.oneOf&&(n.oneOf=e.oneOf.map(i=>g(i,t+1))),e.anyOf&&(n.anyOf=e.anyOf.map(i=>g(i,t+1))),n}function L(e,t=[]){if(!e||typeof e!="object")return t;if(typeof e.$ref=="string"){const n=e.$ref.match(/^#\/components\/schemas\/(.+)$/);n&&t.push(n[1])}return Object.values(e).forEach(n=>L(n,t)),t}function j(e){if(!e)return;const t=e.content||{},n=t["application/json"]||t["application/json-patch+json"]||Object.values(t)[0],i=n==null?void 0:n.schema;return{required:e.required,schema:i?g(i):void 0}}function z(e){var n,i,o;const t=(e==null?void 0:e.content)||{};return((n=t["application/json"])==null?void 0:n.schema)||((i=t["application/json-patch+json"])==null?void 0:i.schema)||((o=Object.values(t)[0])==null?void 0:o.schema)}function K(e){if(!e)return;const t={};return Object.entries(e).forEach(([n,i])=>{if(!(/^2/.test(n)||n==="400"))return;const r=z(i);t[n]={description:P(i.description||"").slice(0,160),schema:r?g(r):void 0}}),Object.keys(t).length?t:void 0}function V(e){const t=P(e.description||"").slice(0,800),n=(e.parameters||[]).slice(0,16).map(i=>({name:i.name,in:i.in,required:i.required,description:i.description?P(i.description).slice(0,180):void 0,schema:i.schema?{type:i.schema.type,format:i.schema.format,enum:i.schema.enum}:void 0}));return{tags:e.tags,summary:e.summary,description:t||void 0,parameters:n.length?n:void 0,requestBody:j(e.requestBody),responses:K(e.responses)}}function I(e,t=0,n=[],i=new Set){var o,r,s;if(!e||typeof e!="object"||t>5)return n;if(Array.isArray(e))return e.forEach(l=>I(l,t+1,n,i)),n;if(typeof e.$ref=="string"){const l=(o=e.$ref.match(/^#\/components\/schemas\/(.+)$/))==null?void 0:o[1];if(l&&!i.has(l)){i.add(l),n.push(l);const u=(s=(r=f.components)==null?void 0:r.schemas)==null?void 0:s[l];u&&I(u,t+1,n,i)}}return e.properties&&typeof e.properties=="object"&&Object.keys(e.properties).forEach(l=>n.push(l)),Object.values(e).forEach(l=>{l&&typeof l=="object"&&I(l,t+1,n,i)}),n}function $(e,t,n){const i=(n.parameters||[]).map(s=>s.name).join(" "),o=L(n.requestBody||{});L(n.responses||{},o);const r=I(n.requestBody);return I(n.responses,0,r),[t.toUpperCase(),e,n.summary||"",(n.tags||[]).join(" "),P(n.description||"").slice(0,800),i,[...new Set(o)].join(" "),[...new Set(r)].join(" ")].join(" ")}function A(e){const t=new Map;let n=0;const i=e.map(o=>{const r=M(o.searchText),s=new Map;return r.forEach(l=>s.set(l,(s.get(l)||0)+1)),s.forEach((l,u)=>{t.set(u,(t.get(u)||0)+1)}),n+=r.length,{...o,tokens:r,frequencies:s,normalizedText:T(o.searchText)}});return{documents:i,documentFrequency:t,averageLength:n/Math.max(i.length,1)}}function U(e,t,n,i=null){const o=q(t),r=q(t,!1);if(o.length===0)return[];const s=T(t).trim(),l=e.documents.length,u=1.5,y=.72,m=e.documents.map(a=>{let d=0;o.forEach(h=>{const w=a.frequencies.get(h)||0;if(w===0)return;const k=e.documentFrequency.get(h)||0,B=Math.log(1+(l-k+.5)/(k+.5)),G=w+u*(1-y+y*a.tokens.length/Math.max(e.averageLength,1));d+=B*(w*(u+1)/G)});const p=T(a.title||"");return r.forEach(h=>{p.includes(h)&&(d+=3.5),a.normalizedText.includes(h)&&(d+=.25)}),s.length>4&&a.normalizedText.includes(s)&&(d+=8),{...a,score:d}}).filter(a=>a.score>0).sort((a,d)=>d.score-a.score);if(!i)return m.slice(0,n);const c=[],b=new Map;for(const a of m){const d=a[i],p=b.get(d)||0;if(!(p>=2)&&(c.push(a),b.set(d,p+1),c.length>=n))break}return c}const N=D.flatMap((e,t)=>W(e.content).map((n,i)=>({id:`help-${t}-${i}`,articleId:`help-${t}`,title:e.title,url:e.url,content:n,chunkIndex:i,searchText:`${e.title} ${n}`}))),v=[];Object.entries(f.paths||{}).forEach(([e,t])=>{Object.entries(t).forEach(([n,i])=>{if(!i||typeof i!="object")return;const o=`${n.toUpperCase()} ${e} ${i.summary||""}`;v.push({id:`swagger-${v.length}`,path:e,method:n.toLowerCase(),operation:V(i),title:o,searchText:$(e,n,i)})})});const E=C.flatMap((e,t)=>W(e.content).map((n,i)=>({id:`kb-${t}-${i}`,articleId:`kb-${t}`,title:e.title,url:e.url,origin:e.origin,content:n,chunkIndex:i,searchText:`${e.title} ${e.origin||""} ${e.filename||""} ${n}`}))),J=A(N),Z=A(v),Y=A(E);function F(e,t=6){return U(J,e,t,"articleId").map(n=>({sourceId:`HC-${n.articleId.replace("help-","")}-${n.chunkIndex+1}`,title:n.title,url:n.url,content:n.content,chunk:n.chunkIndex+1,score:Number(n.score.toFixed(3))}))}function x(e,t=new Set){if(!e||typeof e!="object")return t;if(typeof e.$ref=="string"){const n=e.$ref.match(/^#\/components\/schemas\/(.+)$/);n&&t.add(n[1])}return Object.values(e).forEach(n=>x(n,t)),t}function _(e,t=4){return U(Y,e,t,"articleId").map(n=>({sourceId:`KB-${n.articleId.replace("kb-","")}-${n.chunkIndex+1}`,title:n.title,url:n.url,origin:n.origin,content:n.content,chunk:n.chunkIndex+1,score:Number(n.score.toFixed(3))}))}function R(e,t=6){var y,m,c,b;const n=U(Z,e,t),i={openapi:f.openapi,info:{title:(y=f.info)==null?void 0:y.title,version:(m=f.info)==null?void 0:m.version},paths:{},components:{schemas:{}}},o=n.map(a=>(i.paths[a.path]||(i.paths[a.path]={}),i.paths[a.path][a.method]=a.operation,{sourceId:`API-${a.id.replace("swagger-","")}`,method:a.method.toUpperCase(),path:a.path,summary:a.operation.summary||"",score:Number(a.score.toFixed(3))})),r=[...x(i.paths)].map(a=>({name:a,hop:0})),s=new Set,l=36,u=3;for(;r.length>0&&Object.keys(i.components.schemas).length<l;){const{name:a,hop:d}=r.shift();if(s.has(a))continue;s.add(a);const p=(b=(c=f.components)==null?void 0:c.schemas)==null?void 0:b[a];p&&(i.components.schemas[a]=g(p),!(d+1>=u)&&x(p).forEach(h=>{s.has(h)||r.push({name:h,hop:d+1})}))}return{document:i,sources:o}}function S(e,t,n){const i=new Set,o=[];for(const r of[...e,...t]){const s=r.sourceId;if(!(!s||i.has(s))&&(i.add(s),o.push(r),o.length>=n))break}return o}function ne(e,{helpLimit:t=6,swaggerLimit:n=6,knowledgeLimit:i=4}={}){var m;const o=F(e,t),r=R(e,n),s=_(e,i),l=[e,...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`),...s.map(c=>c.title)].join(`
+`),u=[e,...o.map(c=>c.title),...s.map(c=>c.title)].join(`
+`),y=[e,...o.map(c=>c.title),...r.sources.map(c=>`${c.method} ${c.path} ${c.summary}`)].join(`
+`);return{query:e,coverage:{indexedHelpCenterArticles:D.length,indexedHelpCenterChunks:N.length,indexedSwaggerOperations:v.length,indexedSwaggerSchemas:Object.keys(((m=f.components)==null?void 0:m.schemas)||{}).length,indexedKnowledgeDocuments:C.length,indexedKnowledgeChunks:E.length},helpCenter:S(o,F(l,t),t),swagger:(()=>{var p,h,w;const c=R(u,n),b=S(r.sources,c.sources,n),a={},d={};for(const k of[r,c])Object.assign(a,((p=k.document)==null?void 0:p.paths)||{}),Object.assign(d,((w=(h=k.document)==null?void 0:h.components)==null?void 0:w.schemas)||{});return{sources:b,document:{openapi:r.document.openapi,info:r.document.info,paths:a,components:{schemas:d}}}})(),knowledge:S(s,_(y,i),i)}}function te(){var e;return{helpCenterArticles:D.length,helpCenterChunks:N.length,swaggerOperations:v.length,swaggerSchemas:Object.keys(((e=f.components)==null?void 0:e.schemas)||{}).length,knowledgeDocuments:C.length,knowledgeChunks:E.length}}export{q as extractKeywords,te as getDocumentationIndexStats,F as getRelevantArticles,_ as getRelevantKnowledge,R as getRelevantSwagger,ne as searchDocumentation};
