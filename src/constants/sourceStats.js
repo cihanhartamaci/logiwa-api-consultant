@@ -2,6 +2,6 @@
 export const SOURCE_STATS = {
   helpCenterArticles: 373,
   swaggerOperations: 244,
-  knowledgeDocuments: 24,
+  knowledgeDocuments: 31,
   openApiVersion: 'v3.1',
 };

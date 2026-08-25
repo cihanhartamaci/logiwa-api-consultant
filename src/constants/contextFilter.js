@@ -20,7 +20,7 @@ const synonymGroups = [
   ["replenishment", "replenish", "ikmal"],
   ["allocation", "allocate", "tahsis"],
   ["warehouse", "depo"],
-  ["carrier", "shippingprovider", "kargo"],
+  ["carrier", "shippingprovider", "kargo", "shippo", "fedex"],
   ["return", "rma", "iade"],
   ["list", "search", "get", "report", "liste"],
   ["create", "add", "post", "olustur"],
@@ -29,6 +29,9 @@ const synonymGroups = [
   ["lql", "query", "filter", "filtre"],
   ["webhook", "subscription", "callback", "webhook.logiwa", "hmac"],
   ["shipmentorder", "shipment", "order"],
+  ["integration", "mapping", "connector", "entegrasyon", "playbook"],
+  ["erp", "netsuite", "sap", "oracle"],
+  ["marketplace", "ebay", "squarespace", "storefront", "shopify"],
 ];
 
 const synonymMap = new Map();

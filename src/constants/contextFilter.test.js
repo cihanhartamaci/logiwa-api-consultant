@@ -111,4 +111,28 @@ describe('documentation index', () => {
     const delivery = getRelevantKnowledge('webhook HMAC retry timeout IP whitelist 10 seconds', 5);
     expect(delivery.some((article) => /Delivery|Security|Retries|Operations/i.test(article.title))).toBe(true);
   });
+
+  it('indexes Integration Engineer playbooks for mapping and target-system connectors', () => {
+    const stats = getDocumentationIndexStats();
+    expect(stats.knowledgeDocuments).toBeGreaterThanOrEqual(31);
+
+    const methodology = getRelevantKnowledge('integration mapping methodology field map Transform', 5);
+    expect(methodology.some((article) => /mapping methodology/i.test(article.title))).toBe(true);
+    expect(methodology.every((article) => /^KB-\d+-\d+$/.test(article.sourceId))).toBe(true);
+
+    const netsuite = getRelevantKnowledge('NetSuite shipment order mapping ERP product inventory', 6);
+    expect(
+      netsuite.some(
+        (article) =>
+          /ERP product|marketplace|mapping methodology|architecture patterns/i.test(article.title) ||
+          /NetSuite|mapping table/i.test(article.content)
+      )
+    ).toBe(true);
+
+    const carrier = getRelevantKnowledge('Shippo FedEx tracking integration carrier label', 5);
+    expect(carrier.some((article) => /Carrier and shipping|carrier \/ label/i.test(article.title))).toBe(true);
+
+    const marketplace = getRelevantKnowledge('eBay Squarespace order ingest ShipmentOrder mapping', 5);
+    expect(marketplace.some((article) => /Marketplace and storefront|order ingest/i.test(article.title))).toBe(true);
+  });
 });
