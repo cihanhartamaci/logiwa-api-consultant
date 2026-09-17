@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut } from 'lucide-react';
+import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import { saveKnowledge } from './services/knowledgeBase';
 import { SOURCE_STATS } from './constants/sourceStats';
@@ -9,6 +9,7 @@ import CinematicVideoOverlay, {
   LOGIN_CINEMATIC_VIDEO_ID,
   LOGOUT_CINEMATIC_VIDEO_ID,
 } from './components/CinematicVideoOverlay';
+import ApiKeyInstructionsModal from './components/ApiKeyInstructionsModal';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -71,6 +72,7 @@ function App() {
     () => localStorage.getItem(AUTH_STORAGE_KEY) === '1'
   );
   const [cinematic, setCinematic] = useState(null);
+  const [showKeyHelp, setShowKeyHelp] = useState(false);
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
@@ -422,6 +424,15 @@ function App() {
             )
           )}
           <div className="fallback-controls">
+            <button
+              type="button"
+              className="key-help-trigger"
+              onClick={() => setShowKeyHelp(true)}
+              title="How to get Gemini and Pollinations API keys"
+            >
+              <HelpCircle size={15} />
+              <span>Key help</span>
+            </button>
             <label className="fallback-toggle" title="If Gemini fails, reuse the same Logiwa sources with Pollinations (free key required)">
               <input
                 type="checkbox"
@@ -473,6 +484,14 @@ function App() {
               <p className="welcome-text">
                 I search the Logiwa spec, Help Center, and API support guides before answering — including mapping playbooks for Integration Engineers (SAP, NetSuite, eBay, Shippo, FedEx, and similar). Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
+              <button
+                type="button"
+                className="key-help-welcome-btn"
+                onClick={() => setShowKeyHelp(true)}
+              >
+                <HelpCircle size={16} />
+                How to get Gemini & Pollinations API keys
+              </button>
 
               {!canAsk && (
                 <div className="setup-grid">
@@ -656,6 +675,7 @@ function App() {
           onFinished={handleCinematicFinished}
         />
       )}
+      <ApiKeyInstructionsModal open={showKeyHelp} onClose={() => setShowKeyHelp(false)} />
     </div>
   );
 }
