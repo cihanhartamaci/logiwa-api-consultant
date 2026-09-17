@@ -1,0 +1,14 @@
+---
+description: Always commit, push, and deploy after changes without asking
+alwaysApply: true
+---
+
+# Auto publish
+
+After every meaningful code or asset change in this project:
+
+1. Commit the changes (clear message, no secrets).
+2. Push to `origin` (GitHub).
+3. Run `npm run deploy` so GitHub Pages stays current.
+
+Do **not** ask the user for confirmation and do **not** wait for them to say "bas". Keep both the local PC repo and GitHub/live site updated by default.

@@ -227,9 +227,11 @@
 }
 
 .welcome-logo {
-  width: 72px;
+  width: 88px;
   height: auto;
   margin-bottom: 0.85rem;
+  object-fit: contain;
+  display: block;
   animation: pulse-glow 3s infinite ease-in-out;
 }
 
