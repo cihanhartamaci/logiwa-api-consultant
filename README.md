@@ -12,7 +12,6 @@ Live: https://cihanhartamaci.github.io/logiwa-api-consultant
 
 ## Shared team learning
 
-Feedback and learned knowledge go through a Supabase Edge Function (`kb-api`).
-The SPA only needs `VITE_KB_API_URL` — secrets stay on the server.
-
+Support feedback (thumbs + corrections) can build a shared knowledge base via Supabase.
 See [docs/shared-knowledge.md](docs/shared-knowledge.md) and [`.env.example`](.env.example).
+Without those env vars the app keeps learning in the local browser only.

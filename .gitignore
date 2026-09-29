@@ -25,6 +25,3 @@ dist-ssr
 *.njsproj
 *.sln
 _kb_extract
-
-supabase/.temp/
-

@@ -1,5 +1,0 @@
-# A config file used by the Supabase CLI.
-# https://supabase.com/docs/guides/cli/config
-
-[functions.kb-api]
-verify_jwt = false

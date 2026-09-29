@@ -13,8 +13,7 @@ import {
 import { setLearnedKnowledgeCorpus } from './constants/contextFilter';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
-import LoginScreen from './components/LoginScreen';
-import { AUTH_STORAGE_KEY, clearSession } from './services/kbApi';
+import LoginScreen, { AUTH_STORAGE_KEY } from './components/LoginScreen';
 import CinematicVideoOverlay, {
   LOGIN_CINEMATIC_VIDEO_ID,
   LOGOUT_CINEMATIC_VIDEO_ID,
@@ -448,7 +447,7 @@ function App() {
     if (cinematic?.mode === 'login') {
       setIsAuthenticated(true);
     } else if (cinematic?.mode === 'logout') {
-      clearSession();
+      localStorage.removeItem(AUTH_STORAGE_KEY);
       setIsAuthenticated(false);
     }
     setCinematic(null);
@@ -517,8 +516,8 @@ function App() {
           <p className="sidebar-guide">
             Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and API support guides — including Integration Engineer playbooks for Logiwa ↔ ERP / marketplace / carrier mapping. Keys stay in this browser.
             {isSharedKnowledgeEnabled()
-              ? ' Team knowledge syncs via the KB API backend.'
-              : ' Team learning is local until VITE_KB_API_URL is configured.'}
+              ? ' Team knowledge syncs via Supabase.'
+              : ' Team learning is local until Supabase env is configured.'}
           </p>
 
           <button
