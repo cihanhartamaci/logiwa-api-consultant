@@ -1,7 +1,16 @@
-import { useState, useRef, useEffect } from 'react';
-import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
-import { saveKnowledge } from './services/knowledgeBase';
+import {
+  approveKnowledge,
+  isSharedKnowledgeEnabled,
+  onLearnedCorpusChange,
+  refreshKnowledgeFromRemote,
+  rejectKnowledge,
+  saveKnowledge,
+  submitAnswerFeedback,
+} from './services/knowledgeBase';
+import { setLearnedKnowledgeCorpus } from './constants/contextFilter';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
 import LoginScreen, { AUTH_STORAGE_KEY } from './components/LoginScreen';
@@ -10,6 +19,8 @@ import CinematicVideoOverlay, {
   LOGOUT_CINEMATIC_VIDEO_ID,
 } from './components/CinematicVideoOverlay';
 import ApiKeyInstructionsModal from './components/ApiKeyInstructionsModal';
+import FeedbackBar, { CorrectionModal } from './components/FeedbackBar';
+import KnowledgeDesk from './components/KnowledgeDesk';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -73,10 +84,40 @@ function App() {
   );
   const [cinematic, setCinematic] = useState(null);
   const [showKeyHelp, setShowKeyHelp] = useState(false);
+  const [showKnowledgeDesk, setShowKnowledgeDesk] = useState(false);
+  const [deskRefreshToken, setDeskRefreshToken] = useState(0);
+  const [correctionTarget, setCorrectionTarget] = useState(null);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const messagesRef = useRef(messages);
+
+  const bumpDesk = useCallback(() => {
+    setDeskRefreshToken((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    onLearnedCorpusChange((entries) => {
+      setLearnedKnowledgeCorpus(entries);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthenticated) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        await refreshKnowledgeFromRemote();
+        if (!cancelled) bumpDesk();
+      } catch (err) {
+        console.error('Knowledge refresh failed', err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, bumpDesk]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -181,6 +222,7 @@ function App() {
 
     try {
       let currentProposedKnowledge = null;
+      let answerProvider = geminiReady ? 'gemini' : 'pollinations';
 
       const responseText = await generateConsultantResponse(
         normalizeGeminiApiKey(apiKey), 
@@ -200,16 +242,18 @@ function App() {
           }
           if (toolName === 'fallbackProvider') {
             if (args.provider === 'localDesk') {
+              answerProvider = 'localDesk';
               setToolStatus('Gemini and Pollinations unavailable — opening the local documentation desk...');
               return;
             }
+            answerProvider = 'pollinations';
             const modelLabel = args.model ? ` (${args.model})` : '';
             setToolStatus(`Gemini unavailable — switching to free Pollinations fallback${modelLabel}...`);
           }
         },
         (topic, content) => {
-          currentProposedKnowledge = { topic, content };
-          setToolStatus(''); // Clear searching status
+          currentProposedKnowledge = { topic, content, source: 'proposeLearnedKnowledge' };
+          setToolStatus('');
         },
         {
           enablePollinationsFallback,
@@ -224,7 +268,9 @@ function App() {
           content: responseText,
           proposedKnowledge: currentProposedKnowledge,
           approved: false,
-          animate: true
+          animate: true,
+          provider: answerProvider,
+          feedbackRating: null,
         }
       ]);
     } catch (error) {
@@ -249,21 +295,131 @@ function App() {
     });
   };
 
-  const handleApproveKnowledge = (index, knowledge) => {
-    saveKnowledge(knowledge.topic, knowledge.content);
-    setMessages(prev => {
-      const newMessages = [...prev];
-      newMessages[index].approved = true;
-      return newMessages;
-    });
+  const findPriorUserQuestion = (index) => {
+    for (let i = index - 1; i >= 0; i -= 1) {
+      if (messagesRef.current[i]?.role === 'user') {
+        return messagesRef.current[i].content || '';
+      }
+    }
+    return '';
   };
 
-  const handleRejectKnowledge = (index) => {
-    setMessages(prev => {
-      const newMessages = [...prev];
-      newMessages[index].proposedKnowledge = null; // Hide the card
-      return newMessages;
-    });
+  const handleApproveKnowledge = async (index, knowledge) => {
+    try {
+      if (knowledge.id) {
+        await approveKnowledge(knowledge.id, {
+          topic: knowledge.topic,
+          content: knowledge.content,
+        });
+      } else {
+        await saveKnowledge(knowledge.topic, knowledge.content, {
+          status: 'approved',
+          source: knowledge.source || 'proposeLearnedKnowledge',
+        });
+      }
+      setMessages((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], approved: true };
+        return next;
+      });
+      bumpDesk();
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || 'Failed to save knowledge');
+    }
+  };
+
+  const handleRejectKnowledge = async (index) => {
+    const knowledge = messagesRef.current[index]?.proposedKnowledge;
+    try {
+      if (knowledge?.id) {
+        await rejectKnowledge(knowledge.id);
+      }
+      setMessages((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], proposedKnowledge: null };
+        return next;
+      });
+      bumpDesk();
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || 'Failed to reject knowledge');
+    }
+  };
+
+  const handleFeedbackUp = async (index) => {
+    const msg = messagesRef.current[index];
+    if (!msg || msg.feedbackRating) return;
+    setFeedbackBusy(true);
+    try {
+      await submitAnswerFeedback({
+        rating: 'up',
+        questionText: findPriorUserQuestion(index),
+        answerText: msg.content,
+        provider: msg.provider || null,
+      });
+      setMessages((prev) => {
+        const next = [...prev];
+        next[index] = { ...next[index], feedbackRating: 'up' };
+        return next;
+      });
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || 'Failed to save feedback');
+    } finally {
+      setFeedbackBusy(false);
+    }
+  };
+
+  const handleFeedbackDown = (index) => {
+    const msg = messagesRef.current[index];
+    if (!msg || msg.feedbackRating) return;
+    setCorrectionTarget({ index });
+  };
+
+  const handleCorrectionSubmit = async (correctionText) => {
+    if (!correctionTarget) return;
+    const { index } = correctionTarget;
+    const msg = messagesRef.current[index];
+    if (!msg) return;
+    setFeedbackBusy(true);
+    try {
+      const { pendingKnowledge } = await submitAnswerFeedback({
+        rating: 'down',
+        questionText: findPriorUserQuestion(index),
+        answerText: msg.content,
+        correctionText,
+        provider: msg.provider || null,
+      });
+      setMessages((prev) => {
+        const next = [...prev];
+        next[index] = {
+          ...next[index],
+          feedbackRating: 'down',
+          proposedKnowledge: pendingKnowledge
+            ? {
+                id: pendingKnowledge.id,
+                topic: pendingKnowledge.topic,
+                content: pendingKnowledge.content,
+                source: 'correction',
+              }
+            : {
+                topic: correctionText.slice(0, 120),
+                content: correctionText,
+                source: 'correction',
+              },
+          approved: false,
+        };
+        return next;
+      });
+      setCorrectionTarget(null);
+      bumpDesk();
+    } catch (err) {
+      console.error(err);
+      alert(err?.message || 'Failed to save correction');
+    } finally {
+      setFeedbackBusy(false);
+    }
   };
 
   const handleSuggestedPrompt = (prompt) => {
@@ -359,7 +515,19 @@ function App() {
 
           <p className="sidebar-guide">
             Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and API support guides — including Integration Engineer playbooks for Logiwa ↔ ERP / marketplace / carrier mapping. Keys stay in this browser.
+            {isSharedKnowledgeEnabled()
+              ? ' Team knowledge syncs via Supabase.'
+              : ' Team learning is local until Supabase env is configured.'}
           </p>
+
+          <button
+            type="button"
+            className="clear-chat-btn knowledge-desk-btn"
+            onClick={() => setShowKnowledgeDesk(true)}
+          >
+            <BookMarked size={16} style={{ marginRight: '8px' }} />
+            Knowledge desk
+          </button>
           
           {messages.length > 0 && (
             <button className="clear-chat-btn" onClick={handleClearHistory}>
@@ -579,6 +747,15 @@ function App() {
                           onUpdate={scrollToBottom}
                           onComplete={() => handleStreamComplete(idx)}
                         />
+
+                        {!msg.animate && !String(msg.content || '').startsWith('**Error:**') && (
+                          <FeedbackBar
+                            rating={msg.feedbackRating}
+                            disabled={feedbackBusy}
+                            onUp={() => handleFeedbackUp(idx)}
+                            onDown={() => handleFeedbackDown(idx)}
+                          />
+                        )}
                         
                         {/* Knowledge Proposal Card */}
                         {msg.proposedKnowledge && !msg.animate && (
@@ -676,6 +853,19 @@ function App() {
         />
       )}
       <ApiKeyInstructionsModal open={showKeyHelp} onClose={() => setShowKeyHelp(false)} />
+      <KnowledgeDesk
+        open={showKnowledgeDesk}
+        onClose={() => setShowKnowledgeDesk(false)}
+        refreshToken={deskRefreshToken}
+        onChanged={bumpDesk}
+      />
+      <CorrectionModal
+        key={correctionTarget ? `c-${correctionTarget.index}` : 'c-closed'}
+        open={Boolean(correctionTarget)}
+        busy={feedbackBusy}
+        onClose={() => setCorrectionTarget(null)}
+        onSubmit={handleCorrectionSubmit}
+      />
     </div>
   );
 }

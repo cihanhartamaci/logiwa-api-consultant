@@ -355,6 +355,43 @@ const helpCenterIndex = createIndex(helpCenterDocuments);
 const swaggerIndex = createIndex(swaggerDocuments);
 const knowledgeIndex = createIndex(knowledgeDocuments);
 
+/** Dynamic team-learned knowledge (runtime). */
+let learnedKnowledgeDocuments = [];
+let learnedKnowledgeIndex = createIndex([]);
+
+/**
+ * Rebuild BM25 index from approved learned entries `{ id, topic, content }`.
+ */
+export function setLearnedKnowledgeCorpus(entries = []) {
+  learnedKnowledgeDocuments = (entries || []).flatMap((entry, articleIndex) => {
+    const title = entry.topic || `Learned ${articleIndex + 1}`;
+    const body = String(entry.content || "");
+    return chunkText(body).map((content, chunkIndex) => ({
+      id: `learned-${entry.id || articleIndex}-${chunkIndex}`,
+      articleId: `learned-${entry.id || articleIndex}`,
+      title,
+      url: null,
+      origin: "team-learned",
+      content,
+      chunkIndex,
+      searchText: `${title} ${content}`,
+    }));
+  });
+  learnedKnowledgeIndex = createIndex(learnedKnowledgeDocuments);
+}
+
+export function getRelevantLearnedKnowledge(prompt, limit = 4) {
+  return rankIndex(learnedKnowledgeIndex, prompt, limit, "articleId").map((article) => ({
+    sourceId: `LK-${article.articleId.replace("learned-", "")}-${article.chunkIndex + 1}`,
+    title: article.title,
+    url: article.url,
+    origin: article.origin,
+    content: article.content,
+    chunk: article.chunkIndex + 1,
+    score: Number(article.score.toFixed(3)),
+  }));
+}
+
 export function getRelevantArticles(prompt, limit = 6) {
   return rankIndex(helpCenterIndex, prompt, limit, "articleId").map(article => ({
     sourceId: `HC-${article.articleId.replace("help-", "")}-${article.chunkIndex + 1}`,
@@ -454,7 +491,12 @@ function mergeBySourceId(primary, extra, limit) {
 export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 6, knowledgeLimit = 4 } = {}) {
   const seedHelp = getRelevantArticles(prompt, helpLimit);
   const seedApi = getRelevantSwagger(prompt, swaggerLimit);
-  const seedKnowledge = getRelevantKnowledge(prompt, knowledgeLimit);
+  const seedLearned = getRelevantLearnedKnowledge(prompt, knowledgeLimit);
+  const seedKnowledge = mergeBySourceId(
+    seedLearned,
+    getRelevantKnowledge(prompt, knowledgeLimit),
+    knowledgeLimit
+  );
   const helpQuery = [
     prompt,
     ...seedApi.sources.map((source) => `${source.method} ${source.path} ${source.summary}`),
@@ -471,6 +513,16 @@ export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 6, k
     ...seedApi.sources.map((source) => `${source.method} ${source.path} ${source.summary}`),
   ].join("\n");
 
+  const blendedKnowledge = mergeBySourceId(
+    seedKnowledge,
+    mergeBySourceId(
+      getRelevantLearnedKnowledge(knowledgeQuery, knowledgeLimit),
+      getRelevantKnowledge(knowledgeQuery, knowledgeLimit),
+      knowledgeLimit
+    ),
+    knowledgeLimit
+  );
+
   return {
     query: prompt,
     coverage: {
@@ -480,6 +532,7 @@ export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 6, k
       indexedSwaggerSchemas: Object.keys(swaggerDoc.components?.schemas || {}).length,
       indexedKnowledgeDocuments: knowledgeDoc.length,
       indexedKnowledgeChunks: knowledgeDocuments.length,
+      indexedLearnedChunks: learnedKnowledgeDocuments.length,
     },
     helpCenter: mergeBySourceId(seedHelp, getRelevantArticles(helpQuery, helpLimit), helpLimit),
     swagger: (() => {
@@ -501,7 +554,7 @@ export function searchDocumentation(prompt, { helpLimit = 6, swaggerLimit = 6, k
         },
       };
     })(),
-    knowledge: mergeBySourceId(seedKnowledge, getRelevantKnowledge(knowledgeQuery, knowledgeLimit), knowledgeLimit),
+    knowledge: blendedKnowledge,
   };
 }
 
@@ -513,5 +566,6 @@ export function getDocumentationIndexStats() {
     swaggerSchemas: Object.keys(swaggerDoc.components?.schemas || {}).length,
     knowledgeDocuments: knowledgeDoc.length,
     knowledgeChunks: knowledgeDocuments.length,
+    learnedKnowledgeChunks: learnedKnowledgeDocuments.length,
   };
 }
