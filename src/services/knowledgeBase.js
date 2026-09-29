@@ -1,5 +1,5 @@
-import { getSupabaseClient, getTeamWriteSecret, isSupabaseConfigured } from './supabaseClient';
 import { buildFeedbackPayload, topicFromCorrection } from './feedback';
+import { callKbApi, isKbApiConfigured } from './kbApi';
 
 const CACHE_KEY = 'logiwa_learned_knowledge';
 const PROMPT_CAP = 40;
@@ -44,17 +44,18 @@ function writeLocalCache(entries) {
 }
 
 function mapRemoteRow(row) {
+  if (!row) return null;
   return {
     id: row.id,
     topic: row.topic,
     content: row.content,
     status: row.status,
     source: row.source,
-    feedbackId: row.feedback_id || null,
+    feedbackId: row.feedbackId || row.feedback_id || null,
     upvotes: row.upvotes || 0,
     downvotes: row.downvotes || 0,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt || row.created_at,
+    updatedAt: row.updatedAt || row.updated_at,
   };
 }
 
@@ -88,7 +89,7 @@ export function onLearnedCorpusChange(listener) {
 }
 
 export function isSharedKnowledgeEnabled() {
-  return isSupabaseConfigured();
+  return isKbApiConfigured();
 }
 
 /** Approved knowledge for system-prompt injection (capped). */
@@ -105,32 +106,12 @@ export function getApprovedKnowledgeForRetrieval() {
   return approvedForPrompt;
 }
 
-async function callManageKnowledge(payload) {
-  const supabase = getSupabaseClient();
-  const secret = getTeamWriteSecret();
-  if (!supabase) throw new Error('Supabase is not configured');
-  if (!secret) throw new Error('VITE_TEAM_WRITE_SECRET is not set');
-
-  const { data, error } = await supabase.rpc('manage_knowledge', {
-    p_secret: secret,
-    p_action: payload.action,
-    p_id: payload.id || null,
-    p_topic: payload.topic ?? null,
-    p_content: payload.content ?? null,
-    p_status: payload.status ?? null,
-    p_source: payload.source ?? 'teach',
-    p_feedback_id: payload.feedbackId ?? null,
-  });
-  if (error) throw error;
-  return mapRemoteRow(data);
-}
-
 /**
- * Load shared + local knowledge. Safe to call without Supabase (uses cache).
+ * Load shared + local knowledge. Safe to call without KB API (uses cache).
  */
 export async function refreshKnowledgeFromRemote() {
   const local = readLocalCache();
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     deskEntries = local.map((e) => ({
       ...e,
       status: e.status || 'approved',
@@ -140,13 +121,12 @@ export async function refreshKnowledgeFromRemote() {
     return deskEntries;
   }
 
-  const supabase = getSupabaseClient();
-  const { data, error } = await supabase
-    .from('knowledge_entries')
-    .select('*')
-    .order('updated_at', { ascending: false });
-
-  if (error) {
+  try {
+    const data = await callKbApi('listKnowledge');
+    deskEntries = (data?.entries || []).map(mapRemoteRow).filter(Boolean);
+    setApprovedFromDesk();
+    return deskEntries;
+  } catch (error) {
     console.error('Failed to load shared knowledge', error);
     deskEntries = local.map((e) => ({
       ...e,
@@ -156,15 +136,10 @@ export async function refreshKnowledgeFromRemote() {
     setApprovedFromDesk();
     return deskEntries;
   }
-
-  deskEntries = (data || []).map(mapRemoteRow);
-  setApprovedFromDesk();
-  return deskEntries;
 }
 
 /**
- * Save knowledge. Shared mode: inserts pending (or approved via RPC when status=approved).
- * Local mode: appends to localStorage as approved.
+ * Save knowledge. Shared mode: via kb-api. Local mode: localStorage.
  */
 export async function saveKnowledge(topic, content, options = {}) {
   const {
@@ -173,7 +148,7 @@ export async function saveKnowledge(topic, content, options = {}) {
     feedbackId = null,
   } = options;
 
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     const newEntry = {
       id: Date.now().toString(),
       topic,
@@ -189,41 +164,21 @@ export async function saveKnowledge(topic, content, options = {}) {
     return newEntry;
   }
 
-  if (status === 'pending') {
-    const supabase = getSupabaseClient();
-    const { data, error } = await supabase
-      .from('knowledge_entries')
-      .insert({
-        topic,
-        content,
-        status: 'pending',
-        source,
-        feedback_id: feedbackId,
-      })
-      .select()
-      .single();
-    if (error) throw error;
-    const mapped = mapRemoteRow(data);
-    deskEntries = [mapped, ...deskEntries.filter((e) => e.id !== mapped.id)];
-    setApprovedFromDesk();
-    return mapped;
-  }
-
-  const mapped = await callManageKnowledge({
-    action: 'insert',
+  const data = await callKbApi('saveKnowledge', {
     topic,
     content,
-    status: 'approved',
+    status,
     source,
     feedbackId,
   });
+  const mapped = mapRemoteRow(data?.entry);
   deskEntries = [mapped, ...deskEntries.filter((e) => e.id !== mapped.id)];
   setApprovedFromDesk();
   return mapped;
 }
 
 export async function approveKnowledge(id, overrides = {}) {
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     deskEntries = deskEntries.map((e) =>
       e.id === id ? { ...e, status: 'approved', ...overrides } : e
     );
@@ -231,12 +186,12 @@ export async function approveKnowledge(id, overrides = {}) {
     return deskEntries.find((e) => e.id === id);
   }
 
-  const mapped = await callManageKnowledge({
-    action: 'approve',
+  const data = await callKbApi('approve', {
     id,
     topic: overrides.topic,
     content: overrides.content,
   });
+  const mapped = mapRemoteRow(data?.entry);
   deskEntries = deskEntries.map((e) => (e.id === mapped.id ? mapped : e));
   if (!deskEntries.some((e) => e.id === mapped.id)) {
     deskEntries = [mapped, ...deskEntries];
@@ -246,20 +201,21 @@ export async function approveKnowledge(id, overrides = {}) {
 }
 
 export async function rejectKnowledge(id) {
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     deskEntries = deskEntries.filter((e) => e.id !== id);
     setApprovedFromDesk();
     return null;
   }
 
-  const mapped = await callManageKnowledge({ action: 'reject', id });
+  const data = await callKbApi('reject', { id });
+  const mapped = mapRemoteRow(data?.entry);
   deskEntries = deskEntries.map((e) => (e.id === mapped.id ? mapped : e));
   setApprovedFromDesk();
   return mapped;
 }
 
 export async function updateKnowledge(id, { topic, content, status } = {}) {
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     deskEntries = deskEntries.map((e) =>
       e.id === id
         ? {
@@ -274,26 +230,21 @@ export async function updateKnowledge(id, { topic, content, status } = {}) {
     return deskEntries.find((e) => e.id === id);
   }
 
-  const mapped = await callManageKnowledge({
-    action: 'update',
-    id,
-    topic,
-    content,
-    status,
-  });
+  const data = await callKbApi('update', { id, topic, content, status });
+  const mapped = mapRemoteRow(data?.entry);
   deskEntries = deskEntries.map((e) => (e.id === mapped.id ? mapped : e));
   setApprovedFromDesk();
   return mapped;
 }
 
 export async function deleteKnowledge(id) {
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     deskEntries = deskEntries.filter((e) => e.id !== id);
     setApprovedFromDesk();
     return;
   }
 
-  await callManageKnowledge({ action: 'delete', id });
+  await callKbApi('delete', { id });
   deskEntries = deskEntries.filter((e) => e.id !== id);
   setApprovedFromDesk();
 }
@@ -313,7 +264,7 @@ export async function submitAnswerFeedback({
     provider,
   });
 
-  if (!isSupabaseConfigured()) {
+  if (!isKbApiConfigured()) {
     const localId = `local-fb-${Date.now()}`;
     let pendingKnowledge = null;
     if (rating === 'down' && correctionText) {
@@ -326,28 +277,28 @@ export async function submitAnswerFeedback({
     return { feedback: { id: localId, ...payload }, pendingKnowledge };
   }
 
-  const supabase = getSupabaseClient();
-  const { data: feedback, error } = await supabase
-    .from('answer_feedback')
-    .insert(payload)
-    .select()
-    .single();
-  if (error) throw error;
+  const data = await callKbApi('submitFeedback', {
+    rating: payload.rating,
+    questionText: payload.question_text,
+    answerText: payload.answer_text,
+    correctionText: payload.correction_text,
+    provider: payload.provider,
+    clientId: payload.client_id,
+  });
 
-  let pendingKnowledge = null;
-  if (rating === 'down' && correctionText) {
-    pendingKnowledge = await saveKnowledge(
-      topicFromCorrection(correctionText, questionText),
-      String(correctionText),
-      {
-        status: 'pending',
-        source: 'correction',
-        feedbackId: feedback.id,
-      }
-    );
+  const pendingKnowledge = mapRemoteRow(data?.pendingKnowledge);
+  if (pendingKnowledge) {
+    deskEntries = [
+      pendingKnowledge,
+      ...deskEntries.filter((e) => e.id !== pendingKnowledge.id),
+    ];
+    setApprovedFromDesk();
   }
 
-  return { feedback, pendingKnowledge };
+  return {
+    feedback: data?.feedback || payload,
+    pendingKnowledge,
+  };
 }
 
 export function exportKnowledgeJson() {

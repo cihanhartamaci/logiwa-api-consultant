@@ -1,24 +1,50 @@
 import { useState } from 'react';
 import { Key, Lock, User } from 'lucide-react';
 import logiwaLogo from '../assets/logiwa-logo.png';
+import {
+  isKbApiConfigured,
+  loginWithKbApi,
+  saveSession,
+} from '../services/kbApi';
 
-export const AUTH_STORAGE_KEY = 'aintegration_signed_in';
-const LOGIN_USERNAME = 'integrationsteam';
-const LOGIN_PASSWORD = 'Integration.2026';
+const LOCAL_FALLBACK_USERNAME = 'integrationsteam';
+const LOCAL_FALLBACK_PASSWORD = 'Integration.2026';
 
 export default function LoginScreen({ onSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    if (username.trim() === LOGIN_USERNAME && password === LOGIN_PASSWORD) {
-      localStorage.setItem(AUTH_STORAGE_KEY, '1');
-      onSuccess();
-      return;
+    setError('');
+    setBusy(true);
+    try {
+      if (isKbApiConfigured()) {
+        await loginWithKbApi(username.trim(), password);
+        onSuccess();
+        return;
+      }
+
+      if (
+        username.trim() === LOCAL_FALLBACK_USERNAME &&
+        password === LOCAL_FALLBACK_PASSWORD
+      ) {
+        saveSession({
+          token: 'local-dev-token',
+          expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+        });
+        onSuccess();
+        return;
+      }
+      setError('Invalid username or password.');
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || 'Invalid username or password.');
+    } finally {
+      setBusy(false);
     }
-    setError('Invalid username or password.');
   };
 
   return (
@@ -36,6 +62,7 @@ export default function LoginScreen({ onSuccess }) {
             autoComplete="username"
             placeholder="Username"
             value={username}
+            disabled={busy}
             onChange={(e) => {
               setUsername(e.target.value);
               setError('');
@@ -51,6 +78,7 @@ export default function LoginScreen({ onSuccess }) {
             autoComplete="current-password"
             placeholder="Password"
             value={password}
+            disabled={busy}
             onChange={(e) => {
               setPassword(e.target.value);
               setError('');
@@ -60,9 +88,9 @@ export default function LoginScreen({ onSuccess }) {
 
         {error && <p className="login-error">{error}</p>}
 
-        <button type="submit" className="login-submit">
+        <button type="submit" className="login-submit" disabled={busy}>
           <Key size={16} />
-          Sign in
+          {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
       <p className="app-credit">Created by cihanhartamaci with help from Cursor.</p>

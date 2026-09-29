@@ -86,8 +86,8 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
             </h2>
             <p className="modal-lead">
               {isSharedKnowledgeEnabled()
-                ? 'Shared across the support team via Supabase.'
-                : 'Local-only mode (Supabase env not configured). Entries stay in this browser.'}
+                ? 'Shared across the support team via the KB API backend.'
+                : 'Local-only mode (VITE_KB_API_URL not configured). Entries stay in this browser.'}
             </p>
           </div>
           <button type="button" className="icon-ghost-btn" onClick={onClose} aria-label="Close">
