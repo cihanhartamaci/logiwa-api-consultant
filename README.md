@@ -1,16 +1,17 @@
-# React + Vite
+# AIntegration (Logiwa API consultant)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Static React + Vite app for Logiwa Open API / Help Center Q&A.
 
-Currently, two official plugins are available:
+Live: https://cihanhartamaci.github.io/logiwa-api-consultant
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Scripts
 
-## React Compiler
+- `npm run dev` — local Vite
+- `npm test` — Vitest
+- `npm run build` / `npm run deploy` — GitHub Pages
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Shared team learning
 
-## Expanding the ESLint configuration
+Team feedback/knowledge uses a **Cloudflare Worker + KV** backend. Secrets stay on Cloudflare; the SPA only needs `VITE_KB_API_URL`.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+See [docs/shared-knowledge.md](docs/shared-knowledge.md).
