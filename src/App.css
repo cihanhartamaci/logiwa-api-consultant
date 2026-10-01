@@ -825,6 +825,18 @@
   transform: translateY(-1px);
 }
 
+.document-submit-btn {
+  margin: 0;
+  background: rgba(143, 207, 74, 0.14);
+  border: 1px solid rgba(143, 207, 74, 0.45);
+  color: #4d7c1f;
+}
+
+.document-submit-btn:hover {
+  background: rgba(143, 207, 74, 0.24);
+  transform: translateY(-1px);
+}
+
 /* Tool Status */
 .tool-status {
   font-style: italic;
@@ -1458,3 +1470,17 @@
 }
 .desk-icon-btn.danger:hover { border-color: #ef4444; color: #dc2626; }
 .desk-waiting { font-size: 0.82rem; color: #b45309; font-weight: 500; }
+.document-modal { width: min(680px, 100%); }
+.document-field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.75rem; }
+.document-field > span { font-size: 0.8rem; font-weight: 600; color: #1f6f8f; }
+.document-field .desk-edit-topic { margin-bottom: 0; }
+.document-file-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.document-file-hint { font-size: 0.78rem; color: var(--text-secondary); }
+.document-content { min-height: 200px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 0.82rem; }
+.document-count { align-self: flex-end; font-size: 0.74rem; color: var(--text-secondary); }
+.document-count.over { color: #dc2626; font-weight: 600; }
+.document-result { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 0.6rem; padding: 1.25rem 0 0.25rem; color: #047857; }
+.document-result p { margin: 0; color: var(--text-primary); font-size: 0.92rem; line-height: 1.5; }
+.document-result .modal-actions { align-self: stretch; }
+.desk-card.is-document p { max-height: 180px; overflow: auto; }
+.desk-card-link { display: inline-block; margin-top: 0.4rem; font-size: 0.8rem; color: #1f6f8f; word-break: break-all; }

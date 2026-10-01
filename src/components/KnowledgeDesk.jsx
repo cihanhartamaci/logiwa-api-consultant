@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { BookMarked, CheckCircle, Download, Pencil, Trash2, X } from 'lucide-react';
 import {
+  DOCUMENT_SOURCE,
   approveKnowledge,
   deleteKnowledge,
   exportKnowledgeJson,
@@ -15,8 +16,16 @@ const FILTERS = [
   { id: 'pending', label: 'Pending' },
   { id: 'approved', label: 'Approved' },
   { id: 'rejected', label: 'Rejected' },
+  { id: 'documents', label: 'Documents' },
   { id: 'all', label: 'All' },
 ];
+
+const SOURCE_LABELS = {
+  document: 'best-practice doc',
+  correction: 'correction',
+  teach: 'teach',
+  proposeLearnedKnowledge: 'AI proposal',
+};
 
 export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken = 0 }) {
   const [filter, setFilter] = useState('pending');
@@ -33,6 +42,7 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
     void refreshToken;
     const all = getKnowledgeDeskEntries();
     if (filter === 'all') return all;
+    if (filter === 'documents') return all.filter((e) => e.source === DOCUMENT_SOURCE);
     return all.filter((e) => e.status === filter);
   }, [filter, refreshToken]);
 
@@ -115,10 +125,16 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
         <div className="knowledge-desk-list">
           {entries.length === 0 && <p className="desk-empty">No entries in this filter.</p>}
           {entries.map((entry) => (
-            <article key={entry.id} className={`desk-card status-${entry.status}`}>
+            <article
+              key={entry.id}
+              className={`desk-card status-${entry.status} ${entry.source === DOCUMENT_SOURCE ? 'is-document' : ''}`}
+            >
               <div className="desk-card-meta">
                 <span className={`status-chip ${entry.status}`}>{entry.status}</span>
-                <span className="source-chip">{entry.source || 'teach'}</span>
+                <span className="source-chip">
+                  {SOURCE_LABELS[entry.source] || entry.source || 'teach'}
+                </span>
+                {entry.filename && <span className="source-chip">{entry.filename}</span>}
                 {entry.submittedBy && (
                   <span className="source-chip">by {entry.submittedBy}</span>
                 )}
@@ -162,6 +178,11 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
                 <>
                   <h3>{entry.topic}</h3>
                   <p>{entry.content}</p>
+                  {entry.url && (
+                    <a className="desk-card-link" href={entry.url} target="_blank" rel="noreferrer">
+                      {entry.url}
+                    </a>
+                  )}
                   <div className="desk-card-actions">
                     {canModerate && entry.status !== 'approved' && (
                       <button

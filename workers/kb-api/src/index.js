@@ -15,6 +15,8 @@ const ALLOWED_ORIGINS = [
 
 const KNOWLEDGE_KEY = 'knowledge_entries';
 const FEEDBACK_KEY = 'answer_feedback';
+// All entries share one KV value (25 MiB cap), so individual documents stay small.
+const MAX_CONTENT_CHARS = 200000;
 
 function corsHeaders(request) {
   const origin = request.headers.get('Origin') || '';
@@ -249,16 +251,31 @@ export default {
         if (session.role !== 'admin') {
           status = 'pending';
         }
+        const topic = String(body?.topic || '').trim();
+        const content = String(body?.content || '');
+        if (!topic || !content.trim()) {
+          return json(request, { error: 'topic and content are required' }, 400);
+        }
+        if (content.length > MAX_CONTENT_CHARS) {
+          return json(
+            request,
+            { error: `Content is too long (max ${MAX_CONTENT_CHARS.toLocaleString('en-US')} characters).` },
+            413
+          );
+        }
         const entry = {
           id: newId(),
-          topic: String(body?.topic || ''),
-          content: String(body?.content || ''),
+          topic: topic.slice(0, 200),
+          content,
           status,
           source: String(body?.source || 'teach'),
+          url: body?.url ? String(body.url).slice(0, 500) : null,
+          filename: body?.filename ? String(body.filename).slice(0, 200) : null,
           feedbackId: body?.feedbackId || null,
           submittedBy: session.sub,
           createdAt: now,
           updatedAt: now,
+          ...(status === 'approved' ? { reviewedBy: session.sub } : {}),
         };
         const entries = await readList(env.KB, KNOWLEDGE_KEY);
         entries.unshift(entry);
@@ -301,7 +318,11 @@ export default {
         } else if (action === 'update') {
           if (body?.topic != null) updated.topic = String(body.topic);
           if (body?.content != null) updated.content = String(body.content);
+          if (body?.url !== undefined) updated.url = body.url ? String(body.url).slice(0, 500) : null;
           if (body?.status) updated.status = String(body.status);
+        }
+        if (String(updated.content || '').length > MAX_CONTENT_CHARS) {
+          return json(request, { error: 'Content is too long.' }, 413);
         }
         entries[idx] = updated;
         await writeList(env.KB, KNOWLEDGE_KEY, entries);

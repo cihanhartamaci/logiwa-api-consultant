@@ -89,6 +89,20 @@ So every careful correction you send can make the assistant smarter for Support 
 
 ---
 
+## Share Logiwa best-practice documents
+
+Have a runbook, checklist, or integration guide that would help others? Share it:
+
+1. In the left sidebar, click **Add best-practice doc**.  
+2. Give it a clear **title** (e.g. *“Shopify order sync best practices”*).  
+3. Optionally add a **reference link** (Confluence, Intercom, Google Doc…).  
+4. **Paste the text** or click **Upload text file** (Markdown, TXT, CSV, JSON, YAML, XML, or HTML).  
+5. Click **Submit for approval**.
+
+The Integrations team reviews it. Once approved, AIntegration can find and cite it in answers for everyone. PDF and Word files aren’t supported yet — copy the text in instead.
+
+---
+
 ## Tips for useful feedback
 
 - Prefer **specific, actionable** corrections (endpoint names, field names, status codes, LQL examples).  

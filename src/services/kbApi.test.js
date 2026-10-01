@@ -78,4 +78,70 @@ describe('knowledgeBase local fallback', () => {
     await kb.approveKnowledge(pending.id);
     expect(kb.getAllKnowledge()[0].topic).toBe('Topic');
   });
+
+  it('keeps best-practice documents out of the system prompt but in the search corpus', async () => {
+    const kb = await import('./knowledgeBase');
+    let corpus = [];
+    kb.onLearnedCorpusChange((entries) => {
+      corpus = entries;
+    });
+    const doc = await kb.submitBestPracticeDocument({
+      title: 'Shopify sync best practices',
+      content: 'Always map clientIdentifier before creating shipment orders.',
+      url: 'https://example.com/guide',
+      filename: 'shopify.md',
+    });
+    expect(doc.status).toBe('approved');
+    expect(doc.source).toBe(kb.DOCUMENT_SOURCE);
+    expect(kb.getAllKnowledge().some((e) => e.id === doc.id)).toBe(false);
+    expect(corpus.find((e) => e.id === doc.id)?.url).toBe('https://example.com/guide');
+  });
+
+  it('rejects empty or oversized documents', async () => {
+    const kb = await import('./knowledgeBase');
+    await expect(kb.submitBestPracticeDocument({ title: '', content: 'x' })).rejects.toThrow(/Title/);
+    await expect(
+      kb.submitBestPracticeDocument({ title: 'Big', content: 'a'.repeat(kb.MAX_DOCUMENT_CHARS + 1) })
+    ).rejects.toThrow(/too long/);
+  });
+});
+
+describe('best-practice documents for support', () => {
+  beforeEach(() => {
+    vi.resetModules();
+    vi.unstubAllGlobals();
+    vi.stubGlobal('localStorage', createMemoryStorage());
+    vi.stubEnv('VITE_KB_API_URL', 'https://aintegration-kb-api.cihanhartamaci.workers.dev');
+  });
+
+  it('submits support documents as pending', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          token: 'support-tok',
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          role: 'support',
+          username: 'supportteam',
+        }),
+      })
+      .mockImplementationOnce(async (_url, init) => {
+        const body = JSON.parse(init.body);
+        return {
+          ok: true,
+          json: async () => ({ entry: { id: 'd1', ...body } }),
+        };
+      });
+    vi.stubGlobal('fetch', fetchMock);
+    const { loginWithKbApi } = await import('./kbApi');
+    const kb = await import('./knowledgeBase');
+    await loginWithKbApi('supportteam', 'p');
+    const entry = await kb.submitBestPracticeDocument({ title: 'Doc', content: 'Body' });
+    const sent = JSON.parse(fetchMock.mock.calls[1][1].body);
+    expect(sent.action).toBe('saveKnowledge');
+    expect(sent.status).toBe('pending');
+    expect(sent.source).toBe('document');
+    expect(entry.status).toBe('pending');
+  });
 });

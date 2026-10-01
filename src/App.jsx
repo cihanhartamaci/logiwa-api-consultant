@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked } from 'lucide-react';
+import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import {
   approveKnowledge,
@@ -30,6 +30,7 @@ import CinematicVideoOverlay, {
 import ApiKeyInstructionsModal from './components/ApiKeyInstructionsModal';
 import FeedbackBar, { CorrectionModal } from './components/FeedbackBar';
 import KnowledgeDesk from './components/KnowledgeDesk';
+import DocumentSubmitModal from './components/DocumentSubmitModal';
 import BrandName from './components/BrandName';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
@@ -100,6 +101,7 @@ function App() {
   const [cinematic, setCinematic] = useState(null);
   const [showKeyHelp, setShowKeyHelp] = useState(false);
   const [showKnowledgeDesk, setShowKnowledgeDesk] = useState(false);
+  const [showDocumentModal, setShowDocumentModal] = useState(false);
   const [deskRefreshToken, setDeskRefreshToken] = useState(0);
   const [correctionTarget, setCorrectionTarget] = useState(null);
   const [feedbackBusy, setFeedbackBusy] = useState(false);
@@ -577,6 +579,15 @@ function App() {
               Knowledge desk
             </button>
           )}
+
+          <button
+            type="button"
+            className="clear-chat-btn document-submit-btn"
+            onClick={() => setShowDocumentModal(true)}
+          >
+            <FilePlus size={16} style={{ marginRight: '8px' }} />
+            Add best-practice doc
+          </button>
           
           {messages.length > 0 && (
             <button className="clear-chat-btn" onClick={handleClearHistory}>
@@ -911,6 +922,11 @@ function App() {
           onChanged={bumpDesk}
         />
       )}
+      <DocumentSubmitModal
+        open={showDocumentModal}
+        onClose={() => setShowDocumentModal(false)}
+        onSubmitted={bumpDesk}
+      />
       <CorrectionModal
         key={correctionTarget ? `c-${correctionTarget.index}` : 'c-closed'}
         open={Boolean(correctionTarget)}

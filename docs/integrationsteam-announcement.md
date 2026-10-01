@@ -56,6 +56,15 @@ When **Support** submits a correction, it stays **pending** until someone on Int
 
 ---
 
+### 5. Best-practice documents
+Anyone can click **Add best-practice doc** in the sidebar to share a Logiwa runbook, checklist, or integration guide (paste text or upload Markdown/TXT/CSV/JSON/YAML/XML/HTML, optional reference link).
+
+- Your uploads are approved immediately.  
+- Support uploads land in **Knowledge desk → Pending** (or the **Documents** filter) for you to approve, edit, or reject.  
+- Approved documents are searched and cited in answers, without bloating every prompt.
+
+---
+
 ## Suggested workflow
 
 1. Use AIntegration for real API questions.  

@@ -66,3 +66,11 @@ Then `npm run deploy` for GitHub Pages.
 2. **integrationsteam** corrections are **auto-approved** into the shared knowledge base
 3. **integrationsteam** opens Knowledge desk → **Approve** or **Reject** support pending entries
 4. Approved entries → prompt + BM25 (`[LK-…]`) for the whole team
+
+## Best-practice documents
+
+- Sidebar → **Add best-practice doc** (both roles). Paste text or upload a text file (Markdown, TXT, CSV, JSON, YAML, XML, HTML). Optional reference link.
+- Stored as knowledge entries with `source: "document"` (max 200,000 characters each).
+- Support uploads are **pending**; integrationsteam uploads are **approved** immediately.
+- Approved documents are chunked into the BM25 index and cited as `[LK-…]`. Unlike short corrections, they are **not** pasted into the system prompt, so long guides don't bloat every request.
+- Knowledge desk → **Documents** filter to review them.

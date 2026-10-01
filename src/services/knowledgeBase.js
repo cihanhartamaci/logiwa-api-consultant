@@ -3,6 +3,8 @@ import { callKbApi, canModerateKnowledge, isKbApiConfigured } from './kbApi';
 
 const CACHE_KEY = 'logiwa_learned_knowledge';
 const PROMPT_CAP = 40;
+export const DOCUMENT_SOURCE = 'document';
+export const MAX_DOCUMENT_CHARS = 200000;
 
 let memoryStore = [];
 let deskEntries = [];
@@ -49,6 +51,8 @@ function setApprovedFromDesk() {
       id: e.id,
       topic: e.topic,
       content: e.content,
+      source: e.source || 'teach',
+      url: e.url || null,
       createdAt: e.createdAt,
     }));
   writeLocalCache(deskEntries);
@@ -64,8 +68,9 @@ export function isSharedKnowledgeEnabled() {
   return isKbApiConfigured();
 }
 
+/** Short taught rules for the system prompt; documents are reached through search only. */
 export function getAllKnowledge() {
-  return approvedForPrompt.slice(0, PROMPT_CAP);
+  return approvedForPrompt.filter((e) => e.source !== DOCUMENT_SOURCE).slice(0, PROMPT_CAP);
 }
 
 export function getKnowledgeDeskEntries() {
@@ -102,7 +107,13 @@ export async function refreshKnowledgeFromRemote() {
 }
 
 export async function saveKnowledge(topic, content, options = {}) {
-  const { status = 'approved', source = 'teach', feedbackId = null } = options;
+  const {
+    status = 'approved',
+    source = 'teach',
+    feedbackId = null,
+    url = null,
+    filename = null,
+  } = options;
 
   if (!isKbApiConfigured()) {
     const newEntry = {
@@ -111,6 +122,8 @@ export async function saveKnowledge(topic, content, options = {}) {
       content,
       status,
       source,
+      url,
+      filename,
       feedbackId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -120,7 +133,15 @@ export async function saveKnowledge(topic, content, options = {}) {
     return newEntry;
   }
 
-  const data = await callKbApi('saveKnowledge', { topic, content, status, source, feedbackId });
+  const data = await callKbApi('saveKnowledge', {
+    topic,
+    content,
+    status,
+    source,
+    feedbackId,
+    url,
+    filename,
+  });
   const mapped = data.entry;
   deskEntries = [mapped, ...deskEntries.filter((e) => e.id !== mapped.id)];
   setApprovedFromDesk();
@@ -236,6 +257,25 @@ export async function submitAnswerFeedback({
   }
 
   return { feedback: data.feedback, pendingKnowledge: data.pendingKnowledge || null };
+}
+
+/** Admin uploads go live immediately; everyone else waits for integrationsteam approval. */
+export async function submitBestPracticeDocument({ title, content, url = null, filename = null }) {
+  const cleanTitle = String(title || '').trim();
+  const cleanContent = String(content || '').trim();
+  if (!cleanTitle) throw new Error('Title is required.');
+  if (!cleanContent) throw new Error('Document content is required.');
+  if (cleanContent.length > MAX_DOCUMENT_CHARS) {
+    throw new Error(
+      `Document is too long (${cleanContent.length.toLocaleString('en-US')} characters). Max is ${MAX_DOCUMENT_CHARS.toLocaleString('en-US')}.`
+    );
+  }
+  return saveKnowledge(cleanTitle, cleanContent, {
+    status: canModerateKnowledge() ? 'approved' : 'pending',
+    source: DOCUMENT_SOURCE,
+    url: String(url || '').trim() || null,
+    filename,
+  });
 }
 
 export function exportKnowledgeJson() {
