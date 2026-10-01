@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus } from 'lucide-react';
+import { Bot, Send, User, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import {
   approveKnowledge,
@@ -537,17 +537,17 @@ function App() {
 
         <div className="sidebar-body">
           <div className="source-grid">
-            <div className="source-stat">
+            <div className="source-stat" title={`${SOURCE_STATS.helpCenterArticles} Help Center articles`}>
               <span className="source-stat-value">{SOURCE_STATS.helpCenterArticles}</span>
-              <span className="source-stat-label">Help Center articles</span>
+              <span className="source-stat-label">Help Center</span>
             </div>
-            <div className="source-stat">
+            <div className="source-stat" title={`${SOURCE_STATS.swaggerOperations} Open API operations`}>
               <span className="source-stat-value">{SOURCE_STATS.swaggerOperations}</span>
-              <span className="source-stat-label">API operations</span>
+              <span className="source-stat-label">API ops</span>
             </div>
-            <div className="source-stat">
+            <div className="source-stat" title={`${SOURCE_STATS.knowledgeDocuments} API support guides`}>
               <span className="source-stat-value">{SOURCE_STATS.knowledgeDocuments}</span>
-              <span className="source-stat-label">API support guides</span>
+              <span className="source-stat-label">Guides</span>
             </div>
           </div>
 
@@ -575,7 +575,7 @@ function App() {
               className="clear-chat-btn knowledge-desk-btn"
               onClick={() => setShowKnowledgeDesk(true)}
             >
-              <BookMarked size={16} style={{ marginRight: '8px' }} />
+              <BookMarked size={14} />
               Knowledge desk
             </button>
           )}
@@ -585,35 +585,21 @@ function App() {
             className="clear-chat-btn document-submit-btn"
             onClick={() => setShowDocumentModal(true)}
           >
-            <FilePlus size={16} style={{ marginRight: '8px' }} />
+            <FilePlus size={14} />
             Add best-practice doc
           </button>
           
           {messages.length > 0 && (
             <button className="clear-chat-btn" onClick={handleClearHistory}>
-              <Trash2 size={16} style={{ marginRight: '8px' }} />
-              Clear Chat History
+              <Trash2 size={14} />
+              Clear chat history
             </button>
           )}
         </div>
 
-        <div className="api-stats">
-          <div className="stat-row">
-            <span className="stat-label"><Activity size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/> API Version</span>
-            <span className="stat-value">v3.1</span>
-          </div>
-          <div className="stat-row">
-            <span className="stat-label"><Box size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/> Rate Limit</span>
-            <span className="stat-value">6 req/s</span>
-          </div>
-          <div className="stat-row">
-            <span className="stat-label"><Lock size={14} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'text-bottom' }}/> Auth</span>
-            <span className="stat-value">Bearer Token</span>
-          </div>
-        </div>
         <p className="app-credit">Developed by cihanhartamaci with the assistance of Cursor.</p>
         <button type="button" className="logout-btn" onClick={handleLogout}>
-          <LogOut size={16} style={{ marginRight: '8px' }} />
+          <LogOut size={14} />
           Log out
         </button>
       </aside>
