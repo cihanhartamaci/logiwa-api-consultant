@@ -2,8 +2,14 @@ import { useRef, useState } from 'react';
 import { CheckCircle, FilePlus, Paperclip, X } from 'lucide-react';
 import { MAX_DOCUMENT_CHARS, submitBestPracticeDocument } from '../services/knowledgeBase';
 import { canModerateKnowledge } from '../services/kbApi';
+import {
+  DocumentExtractError,
+  extractBinaryDocumentText,
+  isBinaryDocument,
+} from '../services/documentExtract';
 
-const ACCEPTED_EXTENSIONS = '.md,.markdown,.txt,.csv,.json,.yaml,.yml,.xml,.html,.htm';
+const ACCEPTED_EXTENSIONS =
+  '.pdf,.docx,.doc,.md,.markdown,.txt,.csv,.json,.yaml,.yml,.xml,.html,.htm';
 
 function htmlToText(html) {
   const doc = new DOMParser().parseFromString(html, 'text/html');
@@ -24,6 +30,7 @@ export default function DocumentSubmitModal({ open, onClose, onSubmitted }) {
   const [content, setContent] = useState('');
   const [filename, setFilename] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
   const fileRef = useRef(null);
@@ -42,7 +49,7 @@ export default function DocumentSubmitModal({ open, onClose, onSubmitted }) {
   };
 
   const handleClose = () => {
-    if (busy) return;
+    if (busy || reading) return;
     reset();
     onClose?.();
   };
@@ -51,15 +58,28 @@ export default function DocumentSubmitModal({ open, onClose, onSubmitted }) {
     const file = event.target.files?.[0];
     if (!file) return;
     setError('');
+    setReading(true);
     try {
-      const raw = await file.text();
-      const text = /\.html?$/i.test(file.name) ? htmlToText(raw) : raw;
+      let text;
+      if (isBinaryDocument(file.name)) {
+        text = await extractBinaryDocumentText(file);
+      } else {
+        const raw = await file.text();
+        text = /\.html?$/i.test(file.name) ? htmlToText(raw) : raw;
+      }
       setContent(text);
       setFilename(file.name);
       if (!title.trim()) setTitle(titleFromFilename(file.name));
     } catch (err) {
       console.error(err);
-      setError('Could not read that file. Paste the text instead.');
+      setError(
+        err instanceof DocumentExtractError
+          ? err.message
+          : 'Could not read that file. Paste the text instead.',
+      );
+    } finally {
+      setReading(false);
+      event.target.value = '';
     }
   };
 
@@ -156,11 +176,12 @@ export default function DocumentSubmitModal({ open, onClose, onSubmitted }) {
                   type="button"
                   className="desk-export-btn"
                   onClick={() => fileRef.current?.click()}
+                  disabled={reading || busy}
                 >
-                  <Paperclip size={14} /> Upload text file
+                  <Paperclip size={14} /> {reading ? 'Reading file…' : 'Upload file'}
                 </button>
                 <span className="document-file-hint">
-                  {filename || 'Markdown, TXT, CSV, JSON, YAML, XML, or HTML'}
+                  {filename || 'PDF, Word (.docx), Markdown, TXT, CSV, JSON, YAML, XML, or HTML'}
                 </span>
                 <input
                   ref={fileRef}
@@ -192,7 +213,7 @@ export default function DocumentSubmitModal({ open, onClose, onSubmitted }) {
               <button
                 type="submit"
                 className="approve-btn"
-                disabled={busy || !title.trim() || !content.trim() || tooLong}
+                disabled={busy || reading || !title.trim() || !content.trim() || tooLong}
               >
                 {busy ? 'Submitting…' : isAdmin ? 'Add document' : 'Submit for approval'}
               </button>

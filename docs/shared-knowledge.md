@@ -69,7 +69,8 @@ Then `npm run deploy` for GitHub Pages.
 
 ## Best-practice documents
 
-- Sidebar → **Add best-practice doc** (both roles). Paste text or upload a text file (Markdown, TXT, CSV, JSON, YAML, XML, HTML). Optional reference link.
+- Sidebar → **Add best-practice doc** (both roles). Paste text or upload a file (PDF, Word .docx, Markdown, TXT, CSV, JSON, YAML, XML, HTML). Optional reference link.
+- Text is extracted in the browser (`src/services/documentExtract.js`): .docx via a built-in zip reader + `DecompressionStream`, PDF via pdf.js loaded lazily only when a PDF is picked. Scanned PDFs (no selectable text) and legacy binary .doc files show an error asking for pasted text / a .docx.
 - Stored as knowledge entries with `source: "document"` (max 200,000 characters each).
 - Support uploads are **pending**; integrationsteam uploads are **approved** immediately.
 - Approved documents are chunked into the BM25 index and cited as `[LK-…]`. Unlike short corrections, they are **not** pasted into the system prompt, so long guides don't bloat every request.

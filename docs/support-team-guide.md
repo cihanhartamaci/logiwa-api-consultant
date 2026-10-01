@@ -96,10 +96,12 @@ Have a runbook, checklist, or integration guide that would help others? Share it
 1. In the left sidebar, click **Add best-practice doc**.  
 2. Give it a clear **title** (e.g. *“Shopify order sync best practices”*).  
 3. Optionally add a **reference link** (Confluence, Intercom, Google Doc…).  
-4. **Paste the text** or click **Upload text file** (Markdown, TXT, CSV, JSON, YAML, XML, or HTML).  
+4. **Paste the text** or click **Upload file** (PDF, Word .docx, Markdown, TXT, CSV, JSON, YAML, XML, or HTML). The text is pulled out of the file and shown in the box so you can check or trim it.  
 5. Click **Submit for approval**.
 
-The Integrations team reviews it. Once approved, AIntegration can find and cite it in answers for everyone. PDF and Word files aren’t supported yet — copy the text in instead.
+The Integrations team reviews it. Once approved, AIntegration can find and cite it in answers for everyone.
+
+A couple of limits: scanned PDFs (images of pages) have no selectable text, so paste the text in instead. Old Word **.doc** files aren’t supported — open them in Word and save as **.docx** first.
 
 ---
 
