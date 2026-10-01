@@ -87,24 +87,19 @@ function findOperation(document, method, path) {
 function formatHelp(articles) {
   if (!articles.length) return '';
   const blocks = articles.slice(0, 4).map((article) => {
-    const link = article.url ? ` — [Open article](${article.url})` : '';
     const body = excerpt(article.content);
-    return `### ${article.title || 'Help Center'} \`${article.sourceId}\`${link}\n\n${body}`;
+    return `### ${article.title || 'Workflow'}\n\n${body}`;
   });
-  return `## Workflow (Help Center)\n\n${blocks.join('\n\n')}`;
+  return `## Workflow\n\n${blocks.join('\n\n')}`;
 }
 
 function formatKnowledge(articles) {
   if (!articles.length) return '';
   const blocks = articles.slice(0, 3).map((article) => {
-    const originLabel = String(article.origin || '')
-      .replace(/^Magna-Tiles\s*(?:\/\s*)?/i, '')
-      .trim();
-    const origin = originLabel ? ` · ${originLabel}` : '';
     const body = excerpt(article.content, 640);
-    return `### ${article.title || 'Guide'} \`${article.sourceId}\`${origin}\n\n${body}`;
+    return `### ${article.title || 'Implementation note'}\n\n${body}`;
   });
-  return `## Implementation notes (API support guides)\n\n${blocks.join('\n\n')}`;
+  return `## Implementation notes\n\n${blocks.join('\n\n')}`;
 }
 
 function formatApi(sources) {
@@ -123,9 +118,9 @@ function formatApi(sources) {
     const responseLine = response.length
       ? `\n- **Response fields:** ${response.map((name) => `\`${name}\``).join(', ')}`
       : '';
-    return `### \`${item.method} ${item.path}\` \`${item.sourceId}\`\n\n${summary}${requestLine}${responseLine}`;
+    return `### \`${item.method} ${item.path}\`\n\n${summary}${requestLine}${responseLine}`;
   });
-  return `## Open API contracts\n\n${blocks.join('\n\n')}`;
+  return `## API endpoints and fields\n\n${blocks.join('\n\n')}`;
 }
 
 /**
@@ -143,12 +138,12 @@ export function generateLocalDeskBriefing(question, sources = {}) {
     'Gemini and Pollinations could not produce an answer, so AIntegration opened the **local documentation desk**.',
     `**Your question:** ${asked}`,
     hasHits
-      ? 'This briefing is extracted from the closest indexed sources. Treat it as a reading list with contracts, not a free-form model reply.'
+      ? 'This briefing is extracted from the closest matching Logiwa documentation.'
       : 'The local index did not return a strong match. Try a Logiwa screen name, an endpoint path such as `/v3.1/ShipmentOrder`, or a field name.',
     formatHelp(help),
     formatKnowledge(knowledge),
     formatApi(sources),
-    'When Gemini or Pollinations is available again, ask the same question for a synthesized walkthrough. Until then, the contracts and citations above are the safest ground truth.',
+    'When Gemini or Pollinations is available again, ask the same question for a synthesized walkthrough. Until then, the endpoints and fields above are the safest ground truth.',
     LOCAL_DESK_FOOTER,
   ].filter(Boolean);
 

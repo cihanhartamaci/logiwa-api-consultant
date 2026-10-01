@@ -29,6 +29,7 @@ import {
   switchConversation,
   updateConversationMessages,
 } from './services/conversations';
+import { stripSourceCitations } from './services/citations';
 import { setLearnedKnowledgeCorpus } from './constants/contextFilter';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
@@ -840,7 +841,7 @@ function App() {
                     ) : (
                       <>
                         <TypewriterMarkdown
-                          content={msg.content}
+                          content={stripSourceCitations(msg.content)}
                           animate={Boolean(msg.animate)}
                           onUpdate={scrollToBottom}
                           onComplete={() => handleStreamComplete(activeId, idx)}

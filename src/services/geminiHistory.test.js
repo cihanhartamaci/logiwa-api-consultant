@@ -63,6 +63,21 @@ describe('gemini chat history sanitization', () => {
     const { history } = buildGeminiChatContents(chatHistory, 'grounded');
     expect(history.some((msg) => msg.role === 'model' && msg.parts[0].text.includes('Available inventory'))).toBe(true);
   });
+
+  it('strips source citations from earlier model turns before resending them', () => {
+    const chatHistory = [
+      { role: 'user', content: 'How do I authorize?' },
+      {
+        role: 'model',
+        content: 'Use POST /v3.1/Authorize/token [API-12][HC-3-1].\n\n**Sources**\n- [API-12] POST /v3.1/Authorize/token',
+      },
+      { role: 'user', content: 'What is the request body?' },
+    ];
+
+    const { history } = buildGeminiChatContents(chatHistory, 'grounded');
+    expect(history[1].parts[0].text).toBe('Use POST /v3.1/Authorize/token.');
+    expect(buildConversationContext(chatHistory)).not.toMatch(/\[(?:API|HC)-/);
+  });
 });
 
 describe('conversation continuity helpers', () => {

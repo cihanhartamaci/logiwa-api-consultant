@@ -6,10 +6,12 @@ import {
   pickPollinationsFallbackModels,
   pollinationsErrorKind,
   POLLINATIONS_FALLBACK_MODELS,
+  POLLINATIONS_FALLBACK_SYSTEM_PROMPT,
   POLLINATIONS_OFFICIAL_MODELS,
   prepareGeminiSources,
   resetPollinationsModelCache,
 } from '../services/pollinations';
+import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
 
 afterEach(() => {
   resetPollinationsModelCache();
@@ -233,5 +235,17 @@ describe('pollinations fallback helpers', () => {
     expect(payload.swagger.document.components.schemas.PurchaseOrderCreateApiRequest.required).toContain('code');
     expect(payload.helpCenter[0].content).toContain('Purchase Order screen');
     expect(payload.knowledge[0].sourceId).toBe('KB-0-1');
+    expect(payload.blend).toMatch(/never print IDs/i);
+    expect(payload.blend).not.toMatch(/\bCite\b/);
+  });
+
+  it('tells both models to ground answers without showing source IDs or source lists', () => {
+    for (const prompt of [POLLINATIONS_FALLBACK_SYSTEM_PROMPT, LOGIWA_API_BASE_INSTRUCTIONS]) {
+      expect(prompt).toMatch(/ground|base every factual/i);
+      expect(prompt).toMatch(/never show/i);
+      expect(prompt).not.toMatch(/\bCite\b|MANDATORY CITATIONS|End every answer with a compact \*\*Sources\*\*/);
+      expect(prompt).toContain('Cihan Hartamacı');
+      expect(prompt).toContain('TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes');
+    }
   });
 });

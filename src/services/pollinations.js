@@ -1,3 +1,5 @@
+import { stripSourceCitations } from './citations';
+
 const POLLINATIONS_CHAT_URL = 'https://gen.pollinations.ai/v1/chat/completions';
 const POLLINATIONS_TEXT_URL = 'https://gen.pollinations.ai/text';
 
@@ -8,7 +10,7 @@ This is an ongoing chat. Continue the same topic; resolve follow-ups from earlie
 Answer from the retrieved Help Center, API support guides (including integration playbooks), and Swagger sources plus the conversation so far.
 Blend the operational workflow with implementation guides and the API contract: method, path, request fields, and response fields.
 For ERP/marketplace/carrier/storefront mapping questions (SAP, NetSuite, eBay, Shippo, FedEx, etc.): state direction, Logiwa endpoints/fields from sources only, and a mapping table with columns TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes. Mark target fields as verify-against-target-docs — never invent third-party schemas as fact.
-Cite [HC-...], [KB-...], and [API-...] source IDs for Logiwa claims. Do not invent Logiwa endpoints, fields, or webhook names.
+Ground every Logiwa claim in the retrieved sources, but never show their sourceId labels: no source IDs, bracketed citations, footnotes, or Sources/References sections in the answer. Do not invent Logiwa endpoints, fields, or webhook names.
 If sources and prior turns are insufficient, say so. Be concise.`;
 
 /**
@@ -220,7 +222,7 @@ export function prepareGeminiSources(sources) {
     query: sources?.query,
     coverage: sources?.coverage,
     blend:
-      'Use Help Center for Logiwa IO workflow, API support guides [KB-...] for implementation notes and example payloads, and Swagger paths/components.schemas for exact request and response fields. Cite [HC-...], [KB-...], and [API-...] IDs.',
+      'Use Help Center for Logiwa IO workflow, API support guides for implementation notes and example payloads, and Swagger paths/components.schemas for exact request and response fields. sourceId values are internal labels: ground the answer in them but never print IDs, citations, or a sources list.',
     helpCenter,
     knowledge,
     swagger: {
@@ -237,7 +239,10 @@ function buildMessages(systemInstruction, chatHistory, groundedUserPrompt) {
     if (msg.role === 'user') {
       messages.push({ role: 'user', content: truncate(msg.content, 1500) });
     } else if (msg.role === 'model' && !String(msg.content || '').startsWith('**Error:**')) {
-      messages.push({ role: 'assistant', content: truncate(msg.content || 'Understood.', 1500) });
+      messages.push({
+        role: 'assistant',
+        content: truncate(stripSourceCitations(msg.content) || 'Understood.', 1500),
+      });
     }
   }
 
