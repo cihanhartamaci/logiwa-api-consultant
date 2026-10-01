@@ -9,11 +9,85 @@ import {
   prepareGeminiSources,
 } from './pollinations';
 
-const GEMINI_MODELS = [
+// Each model has its own free-tier quota, so on 429 the cascade walks every entry.
+export const GEMINI_MODELS = [
   'gemini-2.5-flash',
-  'gemini-2.0-flash',
   'gemini-flash-latest',
+  'gemini-2.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-2.0-flash',
+  'gemini-2.0-flash-001',
+  'gemini-2.0-flash-lite',
+  'gemini-2.0-flash-lite-001',
+  'gemini-2.5-pro',
+  'gemini-pro-latest',
+  'gemini-3-flash-preview',
+  'gemini-3-pro-preview',
 ];
+
+const RATE_LIMIT_COOLDOWN_MS = 60 * 1000;
+const MODEL_LIST_TIMEOUT_MS = 4000;
+const rateLimitedUntil = new Map();
+const discoveredModelsByKey = new Map();
+
+const EXCLUDED_MODEL_PATTERN =
+  /embedding|aqa|tts|audio|image|vision|live|imagen|veo|learnlm|gemma|robotics|computer-use|thinking-exp/i;
+
+export function isUsableDiscoveredModel(model) {
+  const name = String(model?.name || '').replace(/^models\//, '');
+  if (!name.startsWith('gemini-')) return false;
+  if (EXCLUDED_MODEL_PATTERN.test(name)) return false;
+  const methods = model?.supportedGenerationMethods || [];
+  return methods.includes('generateContent');
+}
+
+async function discoverGeminiModels(apiKey) {
+  if (discoveredModelsByKey.has(apiKey)) return discoveredModelsByKey.get(apiKey);
+  const promise = (async () => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), MODEL_LIST_TIMEOUT_MS);
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=${encodeURIComponent(apiKey)}`,
+        { signal: controller.signal }
+      );
+      if (!res.ok) return [];
+      const data = await res.json();
+      return (data?.models || [])
+        .filter(isUsableDiscoveredModel)
+        .map((m) => m.name.replace(/^models\//, ''));
+    } catch {
+      return [];
+    } finally {
+      clearTimeout(timer);
+    }
+  })();
+  discoveredModelsByKey.set(apiKey, promise);
+  const models = await promise;
+  if (!models.length) discoveredModelsByKey.delete(apiKey);
+  return models;
+}
+
+/** Static list first, then any extra models the key can reach; cooling-down models go last. */
+export function orderGeminiModels(staticModels, discovered = [], now = Date.now()) {
+  const merged = [...new Set([...staticModels, ...discovered])];
+  const ready = merged.filter((m) => (rateLimitedUntil.get(m) || 0) <= now);
+  const cooling = merged.filter((m) => (rateLimitedUntil.get(m) || 0) > now);
+  return [...ready, ...cooling];
+}
+
+function markRateLimited(modelName, error) {
+  let cooldown = RATE_LIMIT_COOLDOWN_MS;
+  const match = String(error?.message || '').match(/retry in (\d+(\.\d+)?)s/i);
+  if (match) cooldown = Math.max(cooldown, parseFloat(match[1]) * 1000);
+  rateLimitedUntil.set(modelName, Date.now() + cooldown);
+}
+
+function isGeminiKeyError(error) {
+  return /API_KEY_HTTP_REFERRER_BLOCKED|referer <empty>|Requests from referer|httpReferrer|API_KEY_INVALID|API key not valid|API_KEY_SERVICE_BLOCKED|unrestricted/i.test(
+    String(error?.message || error || '')
+  );
+}
 
 let documentationModulePromise;
 
@@ -418,8 +492,10 @@ async function generateWithGemini({
   onKnowledgeProposed,
 }) {
   const errors = [];
+  const discovered = await discoverGeminiModels(apiKey);
+  const models = orderGeminiModels(GEMINI_MODELS, discovered);
 
-  for (const modelName of GEMINI_MODELS) {
+  for (const modelName of models) {
     try {
       return await generateWithGeminiModel({
         apiKey,
@@ -433,11 +509,14 @@ async function generateWithGemini({
     } catch (error) {
       errors.push(`${modelName}: ${error.message}`);
       console.warn(`Gemini model ${modelName} failed:`, error.message);
+      if (isGeminiKeyError(error)) throw error;
+      const rateLimited = isRateLimitError(error);
+      if (rateLimited) markRateLimited(modelName, error);
       if (onToolCall) {
         onToolCall('geminiModelFailed', {
           model: modelName,
           reason: error.message,
-          rateLimited: isRateLimitError(error),
+          rateLimited,
         });
       }
     }
