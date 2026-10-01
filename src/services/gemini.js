@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { LOGIWA_API_BASE_INSTRUCTIONS } from '../constants/logiwaContext';
+import { buildCreatorAnswer, isCreatorQuestion } from './creatorAnswer';
 import { getAllKnowledge } from './knowledgeBase';
 import { generateLocalDeskBriefing } from './localDesk';
 import {
@@ -564,6 +565,10 @@ export async function generateConsultantResponse(
     pollinationsApiKey = '',
   } = options;
 
+  const lastUserMessage = [...chatHistory].reverse().find((msg) => msg.role === 'user')?.content;
+  if (!lastUserMessage) throw new Error('A user message is required.');
+  if (isCreatorQuestion(lastUserMessage)) return buildCreatorAnswer(lastUserMessage);
+
   const geminiKey = normalizeGeminiApiKey(apiKey);
   const geminiReady = looksLikeGeminiApiKey(geminiKey);
   const pollinationsReady =
@@ -572,9 +577,6 @@ export async function generateConsultantResponse(
   if (!geminiReady && !pollinationsReady) {
     throw new Error('A Gemini or Pollinations API key is required.');
   }
-
-  const lastUserMessage = [...chatHistory].reverse().find((msg) => msg.role === 'user')?.content;
-  if (!lastUserMessage) throw new Error('A user message is required.');
 
   const searchQuery = buildConversationSearchQuery(chatHistory);
   const conversationContext = buildConversationContext(chatHistory);
