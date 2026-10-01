@@ -34,6 +34,15 @@ export function getSessionToken() {
   }
 }
 
+/** True when the user may use the app UI (Worker session or local flag). */
+export function isSessionAuthenticated() {
+  if (isKbApiConfigured()) {
+    // Shared KB mode requires a Worker session token, not just the old signed-in flag.
+    return Boolean(getSessionToken());
+  }
+  return hasLocalAuthFlag();
+}
+
 export function saveSession({ token, expiresAt }) {
   if (!storageAvailable()) return;
   localStorage.setItem(SESSION_KEY, JSON.stringify({ token, expiresAt: expiresAt || null }));
@@ -58,6 +67,16 @@ export function hasLocalAuthFlag() {
   }
 }
 
+export function isAuthError(error) {
+  const message = String(error?.message || error || '');
+  return (
+    /missing session token/i.test(message) ||
+    /unauthorized/i.test(message) ||
+    /session expired/i.test(message) ||
+    /not signed in/i.test(message)
+  );
+}
+
 export async function callKbApi(action, payload = {}, options = {}) {
   const { requireAuth = true } = options;
   const url = getKbApiUrl();
@@ -66,7 +85,10 @@ export async function callKbApi(action, payload = {}, options = {}) {
   const headers = { 'Content-Type': 'application/json' };
   if (requireAuth) {
     const token = getSessionToken();
-    if (!token) throw new Error('Not signed in (missing session token)');
+    if (!token) {
+      clearSession();
+      throw new Error('Session expired. Please sign in again.');
+    }
     headers.Authorization = `Bearer ${token}`;
   }
 
@@ -84,6 +106,10 @@ export async function callKbApi(action, payload = {}, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      clearSession();
+      throw new Error('Session expired. Please sign in again.');
+    }
     throw new Error(data?.error || `KB API failed (${response.status})`);
   }
   return data;

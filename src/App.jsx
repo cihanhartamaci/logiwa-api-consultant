@@ -10,7 +10,14 @@ import {
   saveKnowledge,
   submitAnswerFeedback,
 } from './services/knowledgeBase';
-import { AUTH_STORAGE_KEY, clearSession } from './services/kbApi';
+import {
+  clearSession,
+  getSessionToken,
+  hasLocalAuthFlag,
+  isAuthError,
+  isKbApiConfigured,
+  isSessionAuthenticated,
+} from './services/kbApi';
 import { setLearnedKnowledgeCorpus } from './constants/contextFilter';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
@@ -80,9 +87,14 @@ function App() {
   const [enablePollinationsFallback, setEnablePollinationsFallback] = useState(
     () => localStorage.getItem('logiwa_pollinations_fallback') !== 'false'
   );
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    () => localStorage.getItem(AUTH_STORAGE_KEY) === '1'
-  );
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Shared KB needs a Worker token; clear leftover signed-in flag from older builds.
+    if (isKbApiConfigured() && !getSessionToken() && hasLocalAuthFlag()) {
+      clearSession();
+      return false;
+    }
+    return isSessionAuthenticated();
+  });
   const [cinematic, setCinematic] = useState(null);
   const [showKeyHelp, setShowKeyHelp] = useState(false);
   const [showKnowledgeDesk, setShowKnowledgeDesk] = useState(false);
@@ -320,7 +332,9 @@ function App() {
       bumpDesk();
     } catch (err) {
       console.error(err);
-      alert(err?.message || 'Failed to save knowledge');
+      if (!requireSessionOrLogout(err)) {
+        alert(err?.message || 'Failed to save knowledge');
+      }
     }
   };
 
@@ -336,8 +350,18 @@ function App() {
       bumpDesk();
     } catch (err) {
       console.error(err);
-      alert(err?.message || 'Failed to reject knowledge');
+      if (!requireSessionOrLogout(err)) {
+        alert(err?.message || 'Failed to reject knowledge');
+      }
     }
+  };
+
+  const requireSessionOrLogout = (err) => {
+    if (!isAuthError(err)) return false;
+    clearSession();
+    setIsAuthenticated(false);
+    alert('Session expired. Please sign in again with your team username/password.');
+    return true;
   };
 
   const handleFeedbackUp = async (index) => {
@@ -358,7 +382,9 @@ function App() {
       });
     } catch (err) {
       console.error(err);
-      alert(err?.message || 'Failed to save feedback');
+      if (!requireSessionOrLogout(err)) {
+        alert(err?.message || 'Failed to save feedback');
+      }
     } finally {
       setFeedbackBusy(false);
     }
@@ -409,7 +435,9 @@ function App() {
       bumpDesk();
     } catch (err) {
       console.error(err);
-      alert(err?.message || 'Failed to save correction');
+      if (!requireSessionOrLogout(err)) {
+        alert(err?.message || 'Failed to save correction');
+      }
     } finally {
       setFeedbackBusy(false);
     }
