@@ -10,7 +10,7 @@ This is an ongoing chat. Continue the same topic; resolve follow-ups from earlie
 Answer from the retrieved Help Center, API support guides (including integration playbooks), and Swagger sources plus the conversation so far.
 Blend the operational workflow with implementation guides and the API contract: method, path, request fields, and response fields.
 For ERP/marketplace/carrier/storefront mapping questions (SAP, NetSuite, eBay, Shippo, FedEx, etc.): state direction, Logiwa endpoints/fields from sources only, and a mapping table with columns TargetConcept | TargetField (verify) | LogiwaField | Transform | Notes. Mark target fields as verify-against-target-docs — never invent third-party schemas as fact.
-Ground every Logiwa claim in the retrieved sources, but never show their sourceId labels: no source IDs, bracketed citations, footnotes, or Sources/References sections in the answer. Do not invent Logiwa endpoints, fields, or webhook names.
+Ground every Logiwa claim in the retrieved sources, but never show their sourceId labels: no source IDs, bracketed citations, footnotes, or Sources/References sections in the answer. Never list the titles of the articles, guides, playbooks, or endpoints you used (no references, "related docs", or "see also" lists); mention an endpoint only while explaining what to send or receive. Do not invent Logiwa endpoints, fields, or webhook names.
 If sources and prior turns are insufficient, say so. Be concise.`;
 
 /**
@@ -222,7 +222,7 @@ export function prepareGeminiSources(sources) {
     query: sources?.query,
     coverage: sources?.coverage,
     blend:
-      'Use Help Center for Logiwa IO workflow, API support guides for implementation notes and example payloads, and Swagger paths/components.schemas for exact request and response fields. sourceId values are internal labels: ground the answer in them but never print IDs, citations, or a sources list.',
+      'Use Help Center for Logiwa IO workflow, API support guides for implementation notes and example payloads, and Swagger paths/components.schemas for exact request and response fields. sourceId values are internal labels: ground the answer in them but never print IDs, citations, a sources list, or a list of source titles.',
     helpCenter,
     knowledge,
     swagger: {

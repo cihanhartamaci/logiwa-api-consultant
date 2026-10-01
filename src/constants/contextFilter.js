@@ -357,8 +357,23 @@ const knowledgeIndex = createIndex(knowledgeDocuments);
 
 let learnedKnowledgeDocuments = [];
 let learnedKnowledgeIndex = createIndex([]);
+let sourceTitlesCache = null;
+
+/** Titles of every retrievable source plus `METHOD /path` for each operation; memoized. */
+export function getSourceTitles() {
+  if (!sourceTitlesCache) {
+    sourceTitlesCache = [
+      ...helpCenterDoc.map((article) => article.title),
+      ...knowledgeDoc.map((article) => article.title),
+      ...new Set(learnedKnowledgeDocuments.map((document) => document.title)),
+      ...swaggerDocuments.map((document) => `${document.method.toUpperCase()} ${document.path}`),
+    ].filter(Boolean);
+  }
+  return sourceTitlesCache;
+}
 
 export function setLearnedKnowledgeCorpus(entries = []) {
+  sourceTitlesCache = null;
   learnedKnowledgeDocuments = (entries || []).flatMap((entry, articleIndex) => {
     const title = entry.topic || `Learned ${articleIndex + 1}`;
     const body = String(entry.content || "");
