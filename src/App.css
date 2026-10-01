@@ -1464,3 +1464,4 @@
   color: var(--text-secondary); cursor: pointer;
 }
 .desk-icon-btn.danger:hover { border-color: #ef4444; color: #dc2626; }
+.desk-waiting { font-size: 0.82rem; color: #b45309; font-weight: 500; }

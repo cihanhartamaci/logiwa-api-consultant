@@ -9,6 +9,7 @@ import {
   rejectKnowledge,
   updateKnowledge,
 } from '../services/knowledgeBase';
+import { canModerateKnowledge, getSessionRole, getSessionUsername } from '../services/kbApi';
 
 const FILTERS = [
   { id: 'pending', label: 'Pending' },
@@ -24,6 +25,9 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
   const [draftTopic, setDraftTopic] = useState('');
   const [draftContent, setDraftContent] = useState('');
   const [error, setError] = useState('');
+  const canModerate = canModerateKnowledge();
+  const role = getSessionRole();
+  const username = getSessionUsername();
 
   const entries = useMemo(() => {
     void refreshToken;
@@ -74,8 +78,11 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
             </h2>
             <p className="modal-lead">
               {isSharedKnowledgeEnabled()
-                ? 'Shared across the support team via Cloudflare Worker + KV.'
+                ? canModerate
+                  ? `Signed in as ${username || 'admin'} — you can approve support feedback.`
+                  : `Signed in as ${username || 'support'} — submit accuracy feedback; integrationsteam approves.`
                 : 'Local-only mode (VITE_KB_API_URL not configured).'}
+              {role ? ` Role: ${role}.` : ''}
             </p>
           </div>
           <button type="button" className="icon-ghost-btn" onClick={onClose} aria-label="Close">
@@ -96,9 +103,11 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
               </button>
             ))}
           </div>
-          <button type="button" className="desk-export-btn" onClick={handleExport}>
-            <Download size={14} /> Export JSON
-          </button>
+          {canModerate && (
+            <button type="button" className="desk-export-btn" onClick={handleExport}>
+              <Download size={14} /> Export JSON
+            </button>
+          )}
         </div>
 
         {error && <div className="desk-error">{error}</div>}
@@ -110,8 +119,11 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
               <div className="desk-card-meta">
                 <span className={`status-chip ${entry.status}`}>{entry.status}</span>
                 <span className="source-chip">{entry.source || 'teach'}</span>
+                {entry.submittedBy && (
+                  <span className="source-chip">by {entry.submittedBy}</span>
+                )}
               </div>
-              {editingId === entry.id ? (
+              {canModerate && editingId === entry.id ? (
                 <>
                   <input
                     className="desk-edit-topic"
@@ -151,7 +163,7 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
                   <h3>{entry.topic}</h3>
                   <p>{entry.content}</p>
                   <div className="desk-card-actions">
-                    {entry.status !== 'approved' && (
+                    {canModerate && entry.status !== 'approved' && (
                       <button
                         type="button"
                         className="approve-btn"
@@ -161,7 +173,7 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
                         <CheckCircle size={14} /> Approve
                       </button>
                     )}
-                    {entry.status === 'pending' && (
+                    {canModerate && entry.status === 'pending' && (
                       <button
                         type="button"
                         className="reject-btn"
@@ -171,27 +183,34 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
                         Reject
                       </button>
                     )}
-                    <button
-                      type="button"
-                      className="desk-icon-btn"
-                      onClick={() => {
-                        setEditingId(entry.id);
-                        setDraftTopic(entry.topic || '');
-                        setDraftContent(entry.content || '');
-                      }}
-                      title="Edit"
-                    >
-                      <Pencil size={14} />
-                    </button>
-                    <button
-                      type="button"
-                      className="desk-icon-btn danger"
-                      disabled={busyId === entry.id}
-                      onClick={() => run(entry.id, () => deleteKnowledge(entry.id))}
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {canModerate && (
+                      <>
+                        <button
+                          type="button"
+                          className="desk-icon-btn"
+                          onClick={() => {
+                            setEditingId(entry.id);
+                            setDraftTopic(entry.topic || '');
+                            setDraftContent(entry.content || '');
+                          }}
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="desk-icon-btn danger"
+                          disabled={busyId === entry.id}
+                          onClick={() => run(entry.id, () => deleteKnowledge(entry.id))}
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </>
+                    )}
+                    {!canModerate && entry.status === 'pending' && (
+                      <span className="desk-waiting">Waiting for integrationsteam approval</span>
+                    )}
                   </div>
                 </>
               )}
@@ -202,3 +221,4 @@ export default function KnowledgeDesk({ open, onClose, onChanged, refreshToken =
     </div>
   );
 }
+

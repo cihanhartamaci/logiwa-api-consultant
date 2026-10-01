@@ -26,6 +26,8 @@ export default function LoginScreen({ onSuccess }) {
         saveSession({
           token: 'local-dev-token',
           expiresAt: new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString(),
+          role: 'admin',
+          username: LOCAL_FALLBACK_USERNAME,
         });
         onSuccess();
         return;

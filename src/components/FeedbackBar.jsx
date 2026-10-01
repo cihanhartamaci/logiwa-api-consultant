@@ -50,8 +50,8 @@ export function CorrectionModal({ open, onClose, onSubmit, busy = false }) {
       >
         <h2 id="correction-title">What should we learn?</h2>
         <p className="modal-lead">
-          Describe what was wrong and the correct Logiwa guidance. This creates a pending team
-          knowledge entry for review.
+          Describe what was wrong and the correct Logiwa guidance. Support feedback stays pending
+          until integrationsteam approves it into the shared knowledge base.
         </p>
         <form onSubmit={handleSubmit}>
           <textarea

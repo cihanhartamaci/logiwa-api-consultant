@@ -17,7 +17,7 @@ export function getKbApiUrl() {
   return String(import.meta.env.VITE_KB_API_URL || '').trim().replace(/\/$/, '');
 }
 
-export function getSessionToken() {
+function readSessionRecord() {
   try {
     if (!storageAvailable()) return null;
     const raw = localStorage.getItem(SESSION_KEY);
@@ -28,24 +28,51 @@ export function getSessionToken() {
       clearSession();
       return null;
     }
-    return parsed.token;
+    return parsed;
   } catch {
     return null;
   }
 }
 
+export function getSessionToken() {
+  return readSessionRecord()?.token || null;
+}
+
+export function getSessionRole() {
+  const record = readSessionRecord();
+  if (!record) return null;
+  return record.role === 'admin' ? 'admin' : record.role === 'support' ? 'support' : null;
+}
+
+export function getSessionUsername() {
+  return readSessionRecord()?.username || null;
+}
+
+/** Admin (integrationsteam) may approve/reject/edit knowledge. */
+export function canModerateKnowledge() {
+  if (!isKbApiConfigured()) return true; // local-only fallback
+  return getSessionRole() === 'admin';
+}
+
 /** True when the user may use the app UI (Worker session or local flag). */
 export function isSessionAuthenticated() {
   if (isKbApiConfigured()) {
-    // Shared KB mode requires a Worker session token, not just the old signed-in flag.
     return Boolean(getSessionToken());
   }
   return hasLocalAuthFlag();
 }
 
-export function saveSession({ token, expiresAt }) {
+export function saveSession({ token, expiresAt, role = null, username = null }) {
   if (!storageAvailable()) return;
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ token, expiresAt: expiresAt || null }));
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+      token,
+      expiresAt: expiresAt || null,
+      role: role || null,
+      username: username || null,
+    })
+  );
   localStorage.setItem(AUTH_STORAGE_KEY, '1');
 }
 
@@ -118,6 +145,11 @@ export async function callKbApi(action, payload = {}, options = {}) {
 export async function loginWithKbApi(username, password) {
   const data = await callKbApi('login', { username, password }, { requireAuth: false });
   if (!data?.token) throw new Error('Login succeeded but no session token returned');
-  saveSession({ token: data.token, expiresAt: data.expiresAt });
+  saveSession({
+    token: data.token,
+    expiresAt: data.expiresAt,
+    role: data.role || null,
+    username: data.username || username,
+  });
   return data;
 }

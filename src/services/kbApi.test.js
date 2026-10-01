@@ -24,15 +24,40 @@ describe('kbApi', () => {
       json: async () => ({
         token: 'tok',
         expiresAt: new Date(Date.now() + 60_000).toISOString(),
+        role: 'admin',
+        username: 'integrationsteam',
       }),
     });
     vi.stubGlobal('fetch', fetchMock);
-    const { loginWithKbApi, callKbApi, getSessionToken } = await import('./kbApi');
-    await loginWithKbApi('u', 'p');
+    const { loginWithKbApi, callKbApi, getSessionToken, getSessionRole, canModerateKnowledge } =
+      await import('./kbApi');
+    await loginWithKbApi('integrationsteam', 'p');
     expect(getSessionToken()).toBe('tok');
+    expect(getSessionRole()).toBe('admin');
+    expect(canModerateKnowledge()).toBe(true);
     fetchMock.mockResolvedValueOnce({ ok: true, json: async () => ({ entries: [] }) });
     await callKbApi('listKnowledge');
     expect(fetchMock.mock.calls[1][1].headers.Authorization).toBe('Bearer tok');
+  });
+
+  it('support role cannot moderate knowledge', async () => {
+    vi.stubEnv('VITE_KB_API_URL', 'https://aintegration-kb-api.cihanhartamaci.workers.dev');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          token: 'support-tok',
+          expiresAt: new Date(Date.now() + 60_000).toISOString(),
+          role: 'support',
+          username: 'supportteam',
+        }),
+      })
+    );
+    const { loginWithKbApi, getSessionRole, canModerateKnowledge } = await import('./kbApi');
+    await loginWithKbApi('supportteam', 'p');
+    expect(getSessionRole()).toBe('support');
+    expect(canModerateKnowledge()).toBe(false);
   });
 });
 

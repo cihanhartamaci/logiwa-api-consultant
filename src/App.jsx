@@ -11,6 +11,7 @@ import {
   submitAnswerFeedback,
 } from './services/knowledgeBase';
 import {
+  canModerateKnowledge,
   clearSession,
   getSessionToken,
   hasLocalAuthFlag,
@@ -791,7 +792,7 @@ function App() {
                             <div className="knowledge-actions">
                               {msg.approved ? (
                                 <span className="approved-text"><CheckCircle size={16}/> Saved to Knowledge Base!</span>
-                              ) : (
+                              ) : canModerateKnowledge() ? (
                                 <>
                                   <button className="approve-btn" onClick={() => handleApproveKnowledge(idx, msg.proposedKnowledge)}>
                                     Approve & Learn
@@ -800,6 +801,8 @@ function App() {
                                     Reject
                                   </button>
                                 </>
+                              ) : (
+                                <span className="desk-waiting">Submitted — waiting for integrationsteam approval</span>
                               )}
                             </div>
                           </div>

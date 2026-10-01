@@ -1,7 +1,10 @@
 /**
  * AIntegration shared KB API — Cloudflare Worker + KV.
  * Bindings: KB (KV namespace)
- * Secrets: APP_USERNAME, APP_PASSWORD, SESSION_SIGNING_KEY
+ * Secrets:
+ *   SESSION_SIGNING_KEY (required)
+ *   APP_USERNAME / APP_PASSWORD — admin (integrationsteam); also ADMIN_USERNAME / ADMIN_PASSWORD
+ *   SUPPORT_USERNAME / SUPPORT_PASSWORD — supportteam (feedback only)
  */
 
 const ALLOWED_ORIGINS = [
@@ -55,15 +58,17 @@ async function hmacKey(secret) {
   );
 }
 
-async function signSession(username, signingKey, ttlSeconds = 12 * 60 * 60) {
+async function signSession(username, role, signingKey, ttlSeconds = 12 * 60 * 60) {
   const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
-  const payload = JSON.stringify({ sub: username, exp });
+  const payload = JSON.stringify({ sub: username, role, exp });
   const payloadBytes = new TextEncoder().encode(payload);
   const key = await hmacKey(signingKey);
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, payloadBytes));
   return {
     token: `${b64urlEncode(payloadBytes)}.${b64urlEncode(sig)}`,
     expiresAt: new Date(exp * 1000).toISOString(),
+    username,
+    role,
   };
 }
 
@@ -81,10 +86,37 @@ async function verifySession(authHeader, signingKey) {
     const payload = JSON.parse(new TextDecoder().decode(payloadBytes));
     if (!payload?.sub || typeof payload.exp !== 'number') return null;
     if (payload.exp < Math.floor(Date.now() / 1000)) return null;
-    return payload;
+    return {
+      sub: payload.sub,
+      role: payload.role === 'admin' ? 'admin' : 'support',
+      exp: payload.exp,
+    };
   } catch {
     return null;
   }
+}
+
+function resolveUsers(env) {
+  const adminUser = String(env.ADMIN_USERNAME || env.APP_USERNAME || 'integrationsteam').trim();
+  const adminPass = String(env.ADMIN_PASSWORD || env.APP_PASSWORD || '');
+  const supportUser = String(env.SUPPORT_USERNAME || 'supportteam').trim();
+  const supportPass = String(env.SUPPORT_PASSWORD || '');
+  return { adminUser, adminPass, supportUser, supportPass };
+}
+
+function authenticateUser(env, username, password) {
+  const { adminUser, adminPass, supportUser, supportPass } = resolveUsers(env);
+  if (adminPass && username === adminUser && password === adminPass) {
+    return { username: adminUser, role: 'admin' };
+  }
+  if (supportPass && username === supportUser && password === supportPass) {
+    return { username: supportUser, role: 'support' };
+  }
+  return null;
+}
+
+function requireAdmin(session) {
+  return session?.role === 'admin';
 }
 
 function newId() {
@@ -130,6 +162,9 @@ export default {
       if (!env.KB) {
         return json(request, { error: 'KV binding KB is missing' }, 500);
       }
+      if (!env.SESSION_SIGNING_KEY) {
+        return json(request, { error: 'SESSION_SIGNING_KEY secret is missing' }, 500);
+      }
 
       const body = await request.json();
       const action = String(body?.action || '');
@@ -137,10 +172,11 @@ export default {
       if (action === 'login') {
         const username = String(body?.username || '').trim();
         const password = String(body?.password || '');
-        if (username !== env.APP_USERNAME || password !== env.APP_PASSWORD) {
+        const user = authenticateUser(env, username, password);
+        if (!user) {
           return json(request, { error: 'Invalid username or password.' }, 401);
         }
-        const session = await signSession(username, env.SESSION_SIGNING_KEY);
+        const session = await signSession(user.username, user.role, env.SESSION_SIGNING_KEY);
         return json(request, session);
       }
 
@@ -152,9 +188,13 @@ export default {
         return json(request, { error: 'Unauthorized' }, 401);
       }
 
+      if (action === 'me') {
+        return json(request, { username: session.sub, role: session.role });
+      }
+
       if (action === 'listKnowledge') {
         const entries = (await readList(env.KB, KNOWLEDGE_KEY)).sort(sortNewest);
-        return json(request, { entries });
+        return json(request, { entries, role: session.role, username: session.sub });
       }
 
       if (action === 'submitFeedback') {
@@ -170,6 +210,8 @@ export default {
           correctionText: body?.correctionText ? String(body.correctionText) : null,
           provider: body?.provider ? String(body.provider) : null,
           clientId: String(body?.clientId || 'anonymous'),
+          submittedBy: session.sub,
+          submittedByRole: session.role,
         };
 
         const feedbackList = await readList(env.KB, FEEDBACK_KEY);
@@ -186,6 +228,7 @@ export default {
             status: 'pending',
             source: 'correction',
             feedbackId: feedback.id,
+            submittedBy: session.sub,
             createdAt: now,
             updatedAt: now,
           };
@@ -199,7 +242,11 @@ export default {
 
       if (action === 'saveKnowledge') {
         const now = new Date().toISOString();
-        const status = body?.status === 'pending' ? 'pending' : 'approved';
+        let status = body?.status === 'pending' ? 'pending' : 'approved';
+        // Support may only create pending suggestions; admin can approve on save.
+        if (session.role !== 'admin') {
+          status = 'pending';
+        }
         const entry = {
           id: newId(),
           topic: String(body?.topic || ''),
@@ -207,6 +254,7 @@ export default {
           status,
           source: String(body?.source || 'teach'),
           feedbackId: body?.feedbackId || null,
+          submittedBy: session.sub,
           createdAt: now,
           updatedAt: now,
         };
@@ -217,6 +265,13 @@ export default {
       }
 
       if (['approve', 'reject', 'update', 'delete'].includes(action)) {
+        if (!requireAdmin(session)) {
+          return json(
+            request,
+            { error: 'Only integrationsteam (admin) can approve or manage knowledge entries.' },
+            403
+          );
+        }
         const id = body?.id;
         if (!id) return json(request, { error: 'id required' }, 400);
         let entries = await readList(env.KB, KNOWLEDGE_KEY);
@@ -233,6 +288,7 @@ export default {
         const updated = {
           ...current,
           updatedAt: new Date().toISOString(),
+          reviewedBy: session.sub,
         };
         if (action === 'approve') {
           updated.status = 'approved';
