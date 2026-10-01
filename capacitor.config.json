@@ -1,0 +1,12 @@
+{
+  "appId": "com.cihanhartamaci.aintegration",
+  "appName": "AIntegration",
+  "webDir": "dist",
+  "server": {
+    "url": "https://cihanhartamaci.github.io/logiwa-api-consultant/",
+    "cleartext": false
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}

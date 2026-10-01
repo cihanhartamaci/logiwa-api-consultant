@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AIntegration</string>
+    <string name="title_activity_main">AIntegration</string>
+    <string name="package_name">com.cihanhartamaci.aintegration</string>
+    <string name="custom_url_scheme">com.cihanhartamaci.aintegration</string>
+</resources>
