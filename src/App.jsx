@@ -31,6 +31,7 @@ import CinematicVideoOverlay, {
 import ApiKeyInstructionsModal from './components/ApiKeyInstructionsModal';
 import FeedbackBar, { CorrectionModal } from './components/FeedbackBar';
 import KnowledgeDesk from './components/KnowledgeDesk';
+import BrandName from './components/BrandName';
 import logiwaLogo from './assets/logiwa-logo.png';
 import logiwaMark from './assets/logiwa-mark.png';
 import './App.css';
@@ -529,7 +530,7 @@ function App() {
         <div className="sidebar-header">
           <img src={logiwaLogo} alt="Logiwa" className="brand-logo" />
           <div className="brand-copy">
-            <div className="logo-text text-gradient">AIntegration</div>
+            <div className="logo-text"><BrandName /></div>
           </div>
         </div>
 

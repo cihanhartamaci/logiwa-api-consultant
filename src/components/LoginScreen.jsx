@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Key, Lock, User } from 'lucide-react';
 import logiwaLogo from '../assets/logiwa-logo.png';
+import BrandName from './BrandName';
 import { isKbApiConfigured, loginWithKbApi, saveSession } from '../services/kbApi';
 
 const LOCAL_FALLBACK_USERNAME = 'integrationsteam';

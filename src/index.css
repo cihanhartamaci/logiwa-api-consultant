@@ -87,6 +87,26 @@ h1, h2, h3, h4 {
   background-clip: text;
 }
 
+.brand-name {
+  display: inline;
+  letter-spacing: -0.03em;
+}
+
+.brand-ai {
+  background: linear-gradient(120deg, #0b7eb8 0%, #2eb5ef 45%, #5ecfff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 800;
+}
+
+.brand-rest {
+  background: linear-gradient(135deg, #5aa8c8 0%, #8fcf4a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 @keyframes slideUpFade {
   from { opacity: 0; transform: translateY(15px); }
   to { opacity: 1; transform: translateY(0); }
