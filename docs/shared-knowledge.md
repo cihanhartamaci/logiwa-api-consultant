@@ -7,8 +7,8 @@ GitHub Pages hosts the SPA. Cloudflare Worker holds secrets and stores shared kn
 
 | User | Role | Can do |
 |------|------|--------|
-| `integrationsteam` | admin | Approve / reject / edit / delete knowledge; export JSON; own corrections auto-approved |
-| `supportteam` | support | Thumbs up/down + corrections (pending only); view desk |
+| `integrationsteam` | admin | Approve / reject / edit / delete knowledge; Knowledge desk; export JSON; own corrections auto-approved |
+| `supportteam` | support | Thumbs up/down + corrections (pending only); no Knowledge desk |
 
 Approval is enforced on the Worker (`403` if support tries approve/reject/update/delete). The UI hides those controls for support.
 

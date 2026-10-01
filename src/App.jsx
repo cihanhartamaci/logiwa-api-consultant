@@ -544,14 +544,16 @@ function App() {
               : ' Team learning is local until VITE_KB_API_URL is set.'}
           </p>
 
-          <button
-            type="button"
-            className="clear-chat-btn knowledge-desk-btn"
-            onClick={() => setShowKnowledgeDesk(true)}
-          >
-            <BookMarked size={16} style={{ marginRight: '8px' }} />
-            Knowledge desk
-          </button>
+          {canModerateKnowledge() && (
+            <button
+              type="button"
+              className="clear-chat-btn knowledge-desk-btn"
+              onClick={() => setShowKnowledgeDesk(true)}
+            >
+              <BookMarked size={16} style={{ marginRight: '8px' }} />
+              Knowledge desk
+            </button>
+          )}
           
           {messages.length > 0 && (
             <button className="clear-chat-btn" onClick={handleClearHistory}>
@@ -878,12 +880,14 @@ function App() {
         />
       )}
       <ApiKeyInstructionsModal open={showKeyHelp} onClose={() => setShowKeyHelp(false)} />
-      <KnowledgeDesk
-        open={showKnowledgeDesk}
-        onClose={() => setShowKnowledgeDesk(false)}
-        refreshToken={deskRefreshToken}
-        onChanged={bumpDesk}
-      />
+      {canModerateKnowledge() && (
+        <KnowledgeDesk
+          open={showKnowledgeDesk}
+          onClose={() => setShowKnowledgeDesk(false)}
+          refreshToken={deskRefreshToken}
+          onChanged={bumpDesk}
+        />
+      )}
       <CorrectionModal
         key={correctionTarget ? `c-${correctionTarget.index}` : 'c-closed'}
         open={Boolean(correctionTarget)}
