@@ -46,7 +46,7 @@ export default function LoginScreen({ onSuccess }) {
     <div className="login-screen">
       <form className="login-card" onSubmit={handleSubmit}>
         <img src={logiwaLogo} alt="Logiwa" className="login-logo" />
-        <h1 className="login-title text-gradient">AIntegration</h1>
+        <h1 className="login-title"><BrandName as="span" /></h1>
         <p className="login-copy">Sign in to continue to the Logiwa API assistant.</p>
 
         <label className="login-field">
@@ -88,7 +88,7 @@ export default function LoginScreen({ onSuccess }) {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <p className="app-credit">Created by cihanhartamaci with help from Cursor.</p>
+      <p className="app-credit">Developed by Cihan Hartamacı with the assistance of Cursor.</p>
     </div>
   );
 }
