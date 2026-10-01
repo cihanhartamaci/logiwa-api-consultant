@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, User, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus, SquarePen } from 'lucide-react';
+import { Bot, Send, User, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus, SquarePen, Menu, X } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import {
   approveKnowledge,
@@ -99,9 +99,12 @@ function App() {
   const [deskRefreshToken, setDeskRefreshToken] = useState(0);
   const [correctionTarget, setCorrectionTarget] = useState(null);
   const [feedbackBusy, setFeedbackBusy] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
+  const drawerToggleRef = useRef(null);
+  const drawerCloseRef = useRef(null);
   const messagesRef = useRef(messages);
   const activeIdRef = useRef(activeId);
 
@@ -200,6 +203,30 @@ function App() {
     scrollToBottom();
   }, [messages, isLoading, toolStatus]);
 
+  const dismissDrawer = useCallback(() => {
+    setIsDrawerOpen(false);
+    drawerToggleRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!isDrawerOpen) return undefined;
+    drawerCloseRef.current?.focus();
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') dismissDrawer();
+    };
+    // The drawer only exists below the 900px breakpoint; drop it if the window grows past that.
+    const desktopQuery = window.matchMedia('(min-width: 901px)');
+    const onDesktop = (event) => {
+      if (event.matches) setIsDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    desktopQuery.addEventListener('change', onDesktop);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      desktopQuery.removeEventListener('change', onDesktop);
+    };
+  }, [isDrawerOpen, dismissDrawer]);
+
   const pollinationsReady = enablePollinationsFallback && Boolean(pollinationsKey.trim());
   const geminiReady = looksLikeGeminiApiKey(apiKey);
   const canAsk = geminiReady || pollinationsReady;
@@ -232,12 +259,14 @@ function App() {
   };
 
   const handleNewChat = () => {
+    setIsDrawerOpen(false);
     setCorrectionTarget(null);
     setChatState((prev) => startNewConversation(prev));
     textareaRef.current?.focus();
   };
 
   const handleSelectChat = (conversationId) => {
+    setIsDrawerOpen(false);
     if (conversationId === activeId) return;
     setCorrectionTarget(null);
     setChatState((prev) => switchConversation(prev, conversationId));
@@ -508,6 +537,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    setIsDrawerOpen(false);
     setCinematic({
       videoId: LOGOUT_CINEMATIC_VIDEO_ID,
       mode: 'logout',
@@ -541,8 +571,21 @@ function App() {
 
   return (
     <div className="app-container">
-      {/* Sidebar */}
-      <aside className="sidebar glass">
+      {/* Sidebar (slide-in drawer below 900px) */}
+      <aside
+        id="app-sidebar"
+        className={`sidebar glass ${isDrawerOpen ? 'open' : ''}`}
+        aria-label="Navigation"
+      >
+        <button
+          type="button"
+          ref={drawerCloseRef}
+          className="drawer-close"
+          onClick={dismissDrawer}
+          aria-label="Close menu"
+        >
+          <X size={18} />
+        </button>
         <div className="sidebar-header">
           <img src={logiwaLogo} alt="Logiwa" className="brand-logo" />
           <div className="brand-copy">
@@ -598,7 +641,10 @@ function App() {
             <button
               type="button"
               className="clear-chat-btn knowledge-desk-btn"
-              onClick={() => setShowKnowledgeDesk(true)}
+              onClick={() => {
+                setIsDrawerOpen(false);
+                setShowKnowledgeDesk(true);
+              }}
             >
               <BookMarked size={14} />
               Knowledge desk
@@ -608,7 +654,10 @@ function App() {
           <button
             type="button"
             className="clear-chat-btn document-submit-btn"
-            onClick={() => setShowDocumentModal(true)}
+            onClick={() => {
+              setIsDrawerOpen(false);
+              setShowDocumentModal(true);
+            }}
           >
             <FilePlus size={14} />
             Add best-practice doc
@@ -656,10 +705,24 @@ function App() {
           Log out
         </button>
       </aside>
+      {isDrawerOpen && (
+        <div className="drawer-backdrop" role="presentation" onClick={dismissDrawer} />
+      )}
 
       {/* Main Content */}
       <main className="main-content">
         <div className="top-bar">
+          <button
+            type="button"
+            ref={drawerToggleRef}
+            className="drawer-toggle"
+            onClick={() => setIsDrawerOpen(true)}
+            aria-label="Open menu"
+            aria-expanded={isDrawerOpen}
+            aria-controls="app-sidebar"
+          >
+            <Menu size={20} />
+          </button>
           {(messages.length > 0 || canAsk) && (
             geminiReady ? (
               <div className="api-key-container connected-badge">
@@ -726,10 +789,6 @@ function App() {
               </span>
             )}
           </div>
-          <button type="button" className="logout-btn logout-btn-top" onClick={handleLogout}>
-            <LogOut size={16} />
-            Log out
-          </button>
         </div>
 
         <div className="chat-container" key={activeId}>
