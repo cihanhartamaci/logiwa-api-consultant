@@ -3,6 +3,7 @@ import { Bot, Send, User, Activity, Box, Lock, Key, CheckCircle, Search, Save, T
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import {
   approveKnowledge,
+  getKnowledgeDeskEntries,
   isSharedKnowledgeEnabled,
   onLearnedCorpusChange,
   refreshKnowledgeFromRemote,
@@ -107,7 +108,36 @@ function App() {
   const textareaRef = useRef(null);
   const messagesRef = useRef(messages);
 
-  const bumpDesk = useCallback(() => setDeskRefreshToken((n) => n + 1), []);
+  const syncProposedKnowledgeWithDesk = useCallback(() => {
+    const byId = new Map(getKnowledgeDeskEntries().map((e) => [e.id, e]));
+    setMessages((prev) => {
+      let changed = false;
+      const next = prev.map((msg) => {
+        const pk = msg.proposedKnowledge;
+        if (!pk?.id) return msg;
+        const entry = byId.get(pk.id);
+        if (!entry) {
+          changed = true;
+          return { ...msg, proposedKnowledge: null, approved: false };
+        }
+        if (entry.status === 'approved' && !msg.approved) {
+          changed = true;
+          return { ...msg, approved: true };
+        }
+        if (entry.status === 'rejected') {
+          changed = true;
+          return { ...msg, proposedKnowledge: null, approved: false };
+        }
+        return msg;
+      });
+      return changed ? next : prev;
+    });
+  }, []);
+
+  const bumpDesk = useCallback(() => {
+    setDeskRefreshToken((n) => n + 1);
+    syncProposedKnowledgeWithDesk();
+  }, [syncProposedKnowledgeWithDesk]);
 
   useEffect(() => {
     onLearnedCorpusChange((entries) => setLearnedKnowledgeCorpus(entries));
