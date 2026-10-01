@@ -413,6 +413,7 @@ function App() {
       });
       setMessages((prev) => {
         const next = [...prev];
+        const autoApproved = pendingKnowledge?.status === 'approved' || canModerateKnowledge();
         next[index] = {
           ...next[index],
           feedbackRating: 'down',
@@ -422,13 +423,14 @@ function App() {
                 topic: pendingKnowledge.topic,
                 content: pendingKnowledge.content,
                 source: 'correction',
+                status: pendingKnowledge.status,
               }
             : {
                 topic: correctionText.slice(0, 120),
                 content: correctionText,
                 source: 'correction',
               },
-          approved: false,
+          approved: autoApproved,
         };
         return next;
       });

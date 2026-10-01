@@ -7,7 +7,7 @@ GitHub Pages hosts the SPA. Cloudflare Worker holds secrets and stores shared kn
 
 | User | Role | Can do |
 |------|------|--------|
-| `integrationsteam` | admin | Approve / reject / edit / delete knowledge; export JSON |
+| `integrationsteam` | admin | Approve / reject / edit / delete knowledge; export JSON; own corrections auto-approved |
 | `supportteam` | support | Thumbs up/down + corrections (pending only); view desk |
 
 Approval is enforced on the Worker (`403` if support tries approve/reject/update/delete). The UI hides those controls for support.
@@ -63,5 +63,6 @@ Then `npm run deploy` for GitHub Pages.
 ## Product loop
 
 1. **supportteam** signs in → rates answers (thumbs) and submits corrections → entries land as **pending**
-2. **integrationsteam** opens Knowledge desk → **Approve** or **Reject**
-3. Approved entries → prompt + BM25 (`[LK-…]`) for the whole team
+2. **integrationsteam** corrections are **auto-approved** into the shared knowledge base
+3. **integrationsteam** opens Knowledge desk → **Approve** or **Reject** support pending entries
+4. Approved entries → prompt + BM25 (`[LK-…]`) for the whole team

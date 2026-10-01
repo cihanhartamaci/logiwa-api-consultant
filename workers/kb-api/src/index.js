@@ -221,16 +221,18 @@ export default {
         let pendingKnowledge = null;
         if (rating === 'down' && feedback.correctionText) {
           const now = new Date().toISOString();
+          const autoApprove = session.role === 'admin';
           pendingKnowledge = {
             id: newId(),
             topic: topicFromCorrection(feedback.correctionText, feedback.questionText),
             content: feedback.correctionText,
-            status: 'pending',
+            status: autoApprove ? 'approved' : 'pending',
             source: 'correction',
             feedbackId: feedback.id,
             submittedBy: session.sub,
             createdAt: now,
             updatedAt: now,
+            ...(autoApprove ? { reviewedBy: session.sub } : {}),
           };
           const entries = await readList(env.KB, KNOWLEDGE_KEY);
           entries.unshift(pendingKnowledge);

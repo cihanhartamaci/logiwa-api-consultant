@@ -1,5 +1,5 @@
 import { buildFeedbackPayload, topicFromCorrection } from './feedback';
-import { callKbApi, isKbApiConfigured } from './kbApi';
+import { callKbApi, canModerateKnowledge, isKbApiConfigured } from './kbApi';
 
 const CACHE_KEY = 'logiwa_learned_knowledge';
 const PROMPT_CAP = 40;
@@ -209,7 +209,10 @@ export async function submitAnswerFeedback({
       pendingKnowledge = await saveKnowledge(
         topicFromCorrection(correctionText, questionText),
         correctionText,
-        { status: 'pending', source: 'correction' }
+        {
+          status: canModerateKnowledge() ? 'approved' : 'pending',
+          source: 'correction',
+        }
       );
     }
     return { feedback: { id: `local-fb-${Date.now()}`, ...payload }, pendingKnowledge };
