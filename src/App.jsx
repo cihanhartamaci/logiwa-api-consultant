@@ -561,7 +561,7 @@ function App() {
               Pollinations {pollinationsReady ? 'ready' : 'fallback'}
             </div>
             <div
-              className="status-pill on"
+              className="status-pill on violet"
               title="If Gemini and Pollinations both fail, answers are assembled from the local Logiwa index"
             >
               <span className="status-dot" />
