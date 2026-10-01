@@ -600,7 +600,7 @@ function App() {
             <span className="stat-value">Bearer Token</span>
           </div>
         </div>
-        <p className="app-credit">Developed by Cihan Hartamacı with the assistance of Cursor.</p>
+        <p className="app-credit">Developed by cihanhartamaci with the assistance of Cursor.</p>
         <button type="button" className="logout-btn" onClick={handleLogout}>
           <LogOut size={16} style={{ marginRight: '8px' }} />
           Log out

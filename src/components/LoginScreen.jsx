@@ -88,7 +88,7 @@ export default function LoginScreen({ onSuccess }) {
           {busy ? 'Signing in…' : 'Sign in'}
         </button>
       </form>
-      <p className="app-credit">Developed by Cihan Hartamacı with the assistance of Cursor.</p>
+      <p className="app-credit">Developed by cihanhartamaci with the assistance of Cursor.</p>
     </div>
   );
 }
