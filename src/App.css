@@ -154,13 +154,6 @@
   box-shadow: 0 0 8px rgba(75, 183, 224, 0.7);
 }
 
-.sidebar-guide {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-  line-height: 1.5;
-  margin: 0;
-}
-
 .setup-hint {
   color: var(--text-secondary);
   font-size: 0.78rem;

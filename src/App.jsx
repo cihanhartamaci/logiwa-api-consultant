@@ -4,7 +4,6 @@ import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKe
 import {
   approveKnowledge,
   getKnowledgeDeskEntries,
-  isSharedKnowledgeEnabled,
   onLearnedCorpusChange,
   refreshKnowledgeFromRemote,
   rejectKnowledge,
@@ -568,13 +567,6 @@ function App() {
             </div>
           </div>
 
-          <p className="sidebar-guide">
-            Answers cite Open API {SOURCE_STATS.openApiVersion}, the Intercom Help Center, and API support guides — including Integration Engineer playbooks for Logiwa ↔ ERP / marketplace / carrier mapping. Keys stay in this browser.
-            {isSharedKnowledgeEnabled()
-              ? ' Team knowledge syncs via Cloudflare Worker.'
-              : ' Team learning is local until VITE_KB_API_URL is set.'}
-          </p>
-
           {canModerateKnowledge() && (
             <button
               type="button"
@@ -705,7 +697,7 @@ function App() {
                   <BookOpen size={14} /> {SOURCE_STATS.knowledgeDocuments} API support guides
                 </span>
               </div>
-              <h1 className="welcome-title text-gradient">AIntegration</h1>
+              <h1 className="welcome-title"><BrandName as="span" /></h1>
               <p className="welcome-text">
                 I search the Logiwa spec, Help Center, and API support guides before answering — including mapping playbooks for Integration Engineers (SAP, NetSuite, eBay, Shippo, FedEx, and similar). Connect Gemini for the full expert, or paste a free Pollinations key to start immediately.
               </p>
