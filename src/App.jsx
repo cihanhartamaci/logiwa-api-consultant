@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, Send, User, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus } from 'lucide-react';
+import { Bot, Send, User, Key, CheckCircle, Search, Save, Trash2, BookOpen, Waypoints, ExternalLink, LogOut, HelpCircle, BookMarked, FilePlus, SquarePen } from 'lucide-react';
 import { generateConsultantResponse, looksLikeGeminiApiKey, normalizeGeminiApiKey, explainGeminiKeyError } from './services/gemini';
 import {
   approveKnowledge,
@@ -19,6 +19,16 @@ import {
   isKbApiConfigured,
   isSessionAuthenticated,
 } from './services/kbApi';
+import {
+  deleteConversation,
+  formatRelativeTime,
+  loadConversationState,
+  mapAllMessages,
+  saveConversationState,
+  startNewConversation,
+  switchConversation,
+  updateConversationMessages,
+} from './services/conversations';
 import { setLearnedKnowledgeCorpus } from './constants/contextFilter';
 import { SOURCE_STATS } from './constants/sourceStats';
 import TypewriterMarkdown from './components/TypewriterMarkdown';
@@ -54,35 +64,18 @@ const SUGGESTED_PROMPTS = [
   },
 ];
 
-const HISTORY_KEY = 'logiwa_chat_history';
-const TTL_HOURS = 24;
+const EMPTY_MESSAGES = [];
 
 function App() {
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem(HISTORY_KEY);
-    if (!saved) return [];
-    try {
-      const { timestamp, data } = JSON.parse(saved);
-      const hoursPassed = (Date.now() - timestamp) / (1000 * 60 * 60);
-      if (hoursPassed > TTL_HOURS) {
-        localStorage.removeItem(HISTORY_KEY);
-        return [];
-      }
-      return Array.isArray(data)
-        ? data.map((msg) => {
-            const rest = { ...msg };
-            delete rest.animate;
-            return rest;
-          })
-        : [];
-    } catch (e) {
-      console.error('Failed to load history', e);
-      return [];
-    }
-  });
+  const [chatState, setChatState] = useState(() => loadConversationState(localStorage));
+  const { conversations, activeId } = chatState;
+  const activeConversation = conversations.find((c) => c.id === activeId);
+  const messages = activeConversation?.messages ?? EMPTY_MESSAGES;
   const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [toolStatus, setToolStatus] = useState(''); // e.g. "Searching Help Center..."
+  // conversationId -> tool status text ('' while the model is thinking)
+  const [pendingById, setPendingById] = useState({});
+  const isLoading = Object.prototype.hasOwnProperty.call(pendingById, activeId);
+  const toolStatus = isLoading ? pendingById[activeId] : '';
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('logiwa_api_key') || '');
   const [pollinationsKey, setPollinationsKey] = useState(
     () => localStorage.getItem('logiwa_pollinations_key') || ''
@@ -109,30 +102,43 @@ function App() {
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const messagesRef = useRef(messages);
+  const activeIdRef = useRef(activeId);
+
+  const updateMessages = useCallback((conversationId, updater) => {
+    setChatState((prev) => {
+      const next = updateConversationMessages(prev.conversations, conversationId, updater);
+      return next === prev.conversations ? prev : { ...prev, conversations: next };
+    });
+  }, []);
+
+  const setPendingStatus = useCallback((conversationId, status) => {
+    setPendingById((prev) => ({ ...prev, [conversationId]: status }));
+  }, []);
+
+  const clearPending = useCallback((conversationId) => {
+    setPendingById((prev) => {
+      const next = { ...prev };
+      delete next[conversationId];
+      return next;
+    });
+  }, []);
 
   const syncProposedKnowledgeWithDesk = useCallback(() => {
     const byId = new Map(getKnowledgeDeskEntries().map((e) => [e.id, e]));
-    setMessages((prev) => {
-      let changed = false;
-      const next = prev.map((msg) => {
+    setChatState((prev) => {
+      const next = mapAllMessages(prev.conversations, (msg) => {
         const pk = msg.proposedKnowledge;
         if (!pk?.id) return msg;
         const entry = byId.get(pk.id);
-        if (!entry) {
-          changed = true;
+        if (!entry || entry.status === 'rejected') {
           return { ...msg, proposedKnowledge: null, approved: false };
         }
         if (entry.status === 'approved' && !msg.approved) {
-          changed = true;
           return { ...msg, approved: true };
-        }
-        if (entry.status === 'rejected') {
-          changed = true;
-          return { ...msg, proposedKnowledge: null, approved: false };
         }
         return msg;
       });
-      return changed ? next : prev;
+      return next === prev.conversations ? prev : { ...prev, conversations: next };
     });
   }, []);
 
@@ -163,21 +169,12 @@ function App() {
 
   useEffect(() => {
     messagesRef.current = messages;
-  }, [messages]);
+    activeIdRef.current = activeId;
+  }, [messages, activeId]);
 
-  // Save chat history on change
   useEffect(() => {
-    if (messages.length > 0) {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify({
-        timestamp: Date.now(),
-        data: messages.map((msg) => {
-          const rest = { ...msg };
-          delete rest.animate;
-          return rest;
-        })
-      }));
-    }
-  }, [messages]);
+    saveConversationState(localStorage, chatState);
+  }, [chatState]);
 
   useEffect(() => {
     localStorage.setItem('logiwa_api_key', apiKey);
@@ -233,11 +230,22 @@ function App() {
     }
   };
 
-  const handleClearHistory = () => {
-    if (window.confirm("Are you sure you want to clear the chat history?")) {
-      setMessages([]);
-      localStorage.removeItem(HISTORY_KEY);
-    }
+  const handleNewChat = () => {
+    setCorrectionTarget(null);
+    setChatState((prev) => startNewConversation(prev));
+    textareaRef.current?.focus();
+  };
+
+  const handleSelectChat = (conversationId) => {
+    if (conversationId === activeId) return;
+    setCorrectionTarget(null);
+    setChatState((prev) => switchConversation(prev, conversationId));
+  };
+
+  const handleDeleteChat = (conversation) => {
+    if (!window.confirm(`Delete "${conversation.title}"?`)) return;
+    if (conversation.id === activeId) setCorrectionTarget(null);
+    setChatState((prev) => deleteConversation(prev, conversation.id));
   };
 
   const handleSend = async () => {
@@ -249,17 +257,21 @@ function App() {
       return;
     }
 
+    const conversationId = activeIdRef.current;
+    let finished = false;
+    const setToolStatus = (status) => {
+      if (!finished) setPendingStatus(conversationId, status);
+    };
     const newUserMessage = { role: 'user', content: trimmedInput };
     const historyForModel = [
       ...messagesRef.current.map((msg) => (msg.animate ? { ...msg, animate: false } : msg)),
       newUserMessage,
     ];
-    setMessages(historyForModel);
+    updateMessages(conversationId, () => historyForModel);
     setInput('');
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
-    setIsLoading(true);
     setToolStatus('');
 
     try {
@@ -303,7 +315,7 @@ function App() {
         }
       );
 
-      setMessages((prev) => [
+      updateMessages(conversationId, (prev) => [
         ...prev, 
         { 
           role: 'model', 
@@ -318,18 +330,27 @@ function App() {
     } catch (error) {
       console.error(error);
       const details = explainGeminiKeyError(error);
-      setMessages((prev) => [
+      updateMessages(conversationId, (prev) => [
         ...prev,
         { role: 'model', content: `**Error:** I encountered an issue. Details: ${details}` }
       ]);
     } finally {
-      setIsLoading(false);
-      setToolStatus('');
+      finished = true;
+      clearPending(conversationId);
     }
   };
 
-  const handleStreamComplete = (index) => {
-    setMessages((prev) => {
+  const setMessageAt = (conversationId, index, patch) => {
+    updateMessages(conversationId, (prev) => {
+      if (!prev[index]) return prev;
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  };
+
+  const handleStreamComplete = (conversationId, index) => {
+    updateMessages(conversationId, (prev) => {
       if (!prev[index]?.animate) return prev;
       const next = [...prev];
       next[index] = { ...next[index], animate: false };
@@ -345,6 +366,7 @@ function App() {
   };
 
   const handleApproveKnowledge = async (index, knowledge) => {
+    const conversationId = activeIdRef.current;
     try {
       if (knowledge.id) {
         await approveKnowledge(knowledge.id, {
@@ -357,11 +379,7 @@ function App() {
           source: knowledge.source || 'proposeLearnedKnowledge',
         });
       }
-      setMessages((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], approved: true };
-        return next;
-      });
+      setMessageAt(conversationId, index, { approved: true });
       bumpDesk();
     } catch (err) {
       console.error(err);
@@ -372,14 +390,11 @@ function App() {
   };
 
   const handleRejectKnowledge = async (index) => {
+    const conversationId = activeIdRef.current;
     const knowledge = messagesRef.current[index]?.proposedKnowledge;
     try {
       if (knowledge?.id) await rejectKnowledge(knowledge.id);
-      setMessages((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], proposedKnowledge: null };
-        return next;
-      });
+      setMessageAt(conversationId, index, { proposedKnowledge: null });
       bumpDesk();
     } catch (err) {
       console.error(err);
@@ -398,6 +413,7 @@ function App() {
   };
 
   const handleFeedbackUp = async (index) => {
+    const conversationId = activeIdRef.current;
     const msg = messagesRef.current[index];
     if (!msg || msg.feedbackRating) return;
     setFeedbackBusy(true);
@@ -408,11 +424,7 @@ function App() {
         answerText: msg.content,
         provider: msg.provider || null,
       });
-      setMessages((prev) => {
-        const next = [...prev];
-        next[index] = { ...next[index], feedbackRating: 'up' };
-        return next;
-      });
+      setMessageAt(conversationId, index, { feedbackRating: 'up' });
     } catch (err) {
       console.error(err);
       if (!requireSessionOrLogout(err)) {
@@ -426,12 +438,13 @@ function App() {
   const handleFeedbackDown = (index) => {
     const msg = messagesRef.current[index];
     if (!msg || msg.feedbackRating) return;
-    setCorrectionTarget({ index });
+    setCorrectionTarget({ index, conversationId: activeIdRef.current });
   };
 
   const handleCorrectionSubmit = async (correctionText) => {
     if (!correctionTarget) return;
-    const { index } = correctionTarget;
+    const { index, conversationId } = correctionTarget;
+    if (conversationId !== activeIdRef.current) return;
     const msg = messagesRef.current[index];
     if (!msg) return;
     setFeedbackBusy(true);
@@ -443,7 +456,8 @@ function App() {
         correctionText,
         provider: msg.provider || null,
       });
-      setMessages((prev) => {
+      updateMessages(conversationId, (prev) => {
+        if (!prev[index]) return prev;
         const next = [...prev];
         const autoApproved = pendingKnowledge?.status === 'approved' || canModerateKnowledge();
         next[index] = {
@@ -569,6 +583,16 @@ function App() {
             </div>
           </div>
 
+          <button
+            type="button"
+            className="clear-chat-btn new-chat-btn"
+            onClick={handleNewChat}
+            title="Start a new conversation on a different topic"
+          >
+            <SquarePen size={14} />
+            New chat
+          </button>
+
           {canModerateKnowledge() && (
             <button
               type="button"
@@ -588,13 +612,41 @@ function App() {
             <FilePlus size={14} />
             Add best-practice doc
           </button>
-          
-          {messages.length > 0 && (
-            <button className="clear-chat-btn" onClick={handleClearHistory}>
-              <Trash2 size={14} />
-              Clear chat history
-            </button>
-          )}
+
+          <section className="chat-list-section" aria-label="Chats">
+            <div className="chat-list-heading">Chats</div>
+            <ul className="chat-list">
+              {conversations.map((conversation) => {
+                const isActive = conversation.id === activeId;
+                const isPending = Object.prototype.hasOwnProperty.call(pendingById, conversation.id);
+                return (
+                  <li key={conversation.id} className={`chat-list-item ${isActive ? 'active' : ''}`}>
+                    <button
+                      type="button"
+                      className="chat-list-select"
+                      onClick={() => handleSelectChat(conversation.id)}
+                      title={conversation.title}
+                      aria-current={isActive ? 'true' : undefined}
+                    >
+                      <span className="chat-list-title">{conversation.title}</span>
+                      <span className="chat-list-time">
+                        {isPending ? <span className="chat-list-pending" aria-label="Waiting for reply" /> : formatRelativeTime(conversation.updatedAt)}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="chat-list-delete"
+                      onClick={() => handleDeleteChat(conversation)}
+                      title="Delete chat"
+                      aria-label={`Delete chat ${conversation.title}`}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
         </div>
 
         <p className="app-credit">Developed by cihanhartamaci with the assistance of Cursor.</p>
@@ -679,7 +731,7 @@ function App() {
           </button>
         </div>
 
-        <div className="chat-container">
+        <div className="chat-container" key={activeId}>
           {messages.length === 0 ? (
             <div className="welcome-screen animate-fade-in">
               <img src={logiwaMark} alt="" className="welcome-logo" />
@@ -791,7 +843,7 @@ function App() {
                           content={msg.content}
                           animate={Boolean(msg.animate)}
                           onUpdate={scrollToBottom}
-                          onComplete={() => handleStreamComplete(idx)}
+                          onComplete={() => handleStreamComplete(activeId, idx)}
                         />
 
                         {!msg.animate && !String(msg.content || '').startsWith('**Error:**') && (
