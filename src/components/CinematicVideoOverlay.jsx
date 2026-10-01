@@ -7,7 +7,7 @@ export const LOGOUT_CINEMATIC_VIDEO_ID = '_ZnOfdpOEZQ';
 function youtubeEmbedSrc(videoId) {
   const params = new URLSearchParams({
     autoplay: '1',
-    mute: '1',
+    mute: '0',
     rel: '0',
     modestbranding: '1',
     playsinline: '1',
